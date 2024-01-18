@@ -1,0 +1,658 @@
+#!/bin/bash
+#
+#
+echo
+echo "       autoprepro-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo
+echo $0 $@
+echo
+if [ $# -eq 0 ] ; then
+  echo "autoprepro                                                            autoprepro"
+  echo
+  echo "NAME"
+  echo "       autoprepro - Script to make input file for PREPRO, run PREPRO and post-process the results"
+  echo
+  echo "SYNOPSIS"
+  echo "       autoprepro [option] [value]"
+  echo
+  echo "DESCRIPTION"
+  echo "       With autoprepro, various modules of PREPRO can be invoked in, or left out of,"
+  echo "       a PREPRO input file. Specific input options can be set."
+# 
+################################################################################
+# Test input and output of all options
+################################################################################
+#
+  echo
+  echo "   Operation mode:"
+  echo
+  echo "       Usage: autoprepro [option] [value]"
+  echo
+  echo "       Some option flags should be accompanied by a value"
+  echo
+  echo "       Examples: autoprepro -file Nb093-n.tendl (obligatory: ENDF-6 file)"
+  echo "                 autoprepro -file Nb093-n.tendl -bin /home/raynal/bin/ -nogroupie -xsmin 1.e-12 -mergefile Nb093-n.pendfN"
+  echo "                          (special PREPRO bin directory, skip GROUPIE, minimal cross section of interest: 1.e-12 b, merge with other file)"
+  echo
+  echo "   General options: file to be processed, PREPRO version, pathnames, etc."
+  echo
+  echo "       -file [ENDF file] "
+  echo "             ENDF filename [no default]"
+  echo
+  echo "       -mergefile [ENDF file] "
+  echo "                  Second ENDF filename to merge with [default: none]"
+  echo
+  echo "       -bin [path name] "
+  echo "            Full pathname for PREPRO binaries [default: none]"
+  echo
+  echo "       -ext [name] "
+  echo "            Extension to executables, e.g. C [default: blank]"
+  echo
+  echo "       -[no]here "
+  echo "                 Run PREPRO here or in other (automatically created) directory [default: -here]"
+  echo
+  echo "       -preprodir [path name] "
+  echo "                Full pathname for PREPRO results [default: none]"
+  echo
+  echo "       -[no]preprorun "
+  echo "                   Run PREPRO or just produce the input file [default: -preprorun]"
+  echo
+  echo "       -[no]diag "
+  echo "                  Diagnosis of output [default: -diag]"
+  echo
+  echo "       -[no]clean "
+  echo "                  Clean up working directories [default: -noclean]"
+  echo
+  echo "   General PREPRO parameters"
+  echo
+  echo "        -temp [temperature] "
+  echo "              Temperature [default: 293.16]"
+  echo
+  echo "   Specific PREPRO modules"
+  echo
+  echo "        -[no]linear "
+  echo "                   Run LINEAR [default: -linear]"
+  echo
+  echo "        -[no]recent "
+  echo "                   Run RECENT [default: -recent]"
+  echo
+  echo "        -[no]sigma1 "
+  echo "                   Run SIGMA1 [default: -sigma1]"
+  echo
+  echo "        -[no]sixpak "
+  echo "                   Run SIXPAK [default: -sixpak]"
+  echo
+  echo "        -[no]merger "
+  echo "                   Run MERGER [default: -merger]"
+  echo
+  echo "        -[no]activate "
+  echo "                   Run ACTIVATE [default: -activate]"
+  echo
+  echo "        -[no]dictin "
+  echo "                   Run DICTIN [default: -dictin]"
+  echo
+  echo "        -[no]groupie "
+  echo "                   Run GROUPIE [default: -groupie]"
+  echo
+  echo "        -[no]evalplot "
+  echo "                   Run EVALPLOT [default: -evalplot]"
+  echo
+  echo "        -[no]complot "
+  echo "                   Run COMPLOT [default: -nocomplot]"
+  echo
+  echo "       -file2 [ENDF file] "
+  echo "             ENDF filename for COMPLOT [no default]"
+  echo
+  echo "       -name1 [name] "
+  echo "             Name of first library for COMPLOT [no default]"
+  echo
+  echo "       -name2 [name] "
+  echo "             Name of second library for COMPLOT [no default]"
+  echo
+  echo "   PREPRO input parameters"
+  echo
+  echo "        -[no]keep "
+  echo "                   Keep original data points in LINEAR [default: -keep]"
+  echo
+  echo "        -errmax [error] "
+  echo "                Allowable fractional error for error law [default: 1.e-4]"
+  echo
+  echo "        -xsmin [value] "
+  echo "                  Minimum cross section of interest (barns) for LINEAR [default: 1.e-10]"
+  echo
+  echo "        -[no]urrbroad "
+  echo "                   Broaden URR [default: -nourrbroad]"
+  echo
+  echo "        -group [groupie number] "
+  echo "                Integer to set group structure for groupie [default: 12]"
+  echo
+  echo "AUTHOR"
+  echo "       autoprepro was written by Arjan Koning."
+  exit
+fi
+#
+################################################################################
+# Initialization (default values) of variables
+################################################################################
+#
+Thome=/Users/koning/
+bin=$Thome'bin/'
+Phome=$Thome'tools/prepro-2021/bin/'
+endffile=xxx
+endffile2=xxx
+name1=xxx
+name2=xxx
+mergefile=xxx
+here=1
+preprorun=1
+clean=0
+preprodir=xxx
+linear=1
+recent=1
+sigma1=1
+activate=1
+merger=1
+sixpak=1
+dictin=1
+groupie=1
+evalplot=1
+complot=0
+temp=293.16
+keep=1
+diag=1
+errmax=1.e-4
+xsmin=1.e-10
+urrbroad=0
+group=19
+#
+################################################################################
+# Read command line arguments
+################################################################################
+#
+while [ $# -ge 1 ] ; do
+  case $1 in
+    -file)  endffile=$2;shift 2;;
+    -file2)  endffile2=$2;shift 2;;
+    -name1)  name1=$2;shift 2;;
+    -name2)  name2=$2;shift 2;;
+    -mergefile)  mergefile=$2;shift 2;;
+    -bin)  bin=$2;shift 2;;
+    -ext)  ext=$2;shift 2;;
+    -here)  here=1;shift;;
+    -nohere)  here=0;shift;;
+    -preprodir)  preprodir=$2;shift 2;;
+    -temp)  temp=$2;shift 2;;
+    -preprorun)  preprorun=1;shift;;
+    -nopreprorun)  preprorun=0;shift;;
+    -clean)  clean=1;shift;;
+    -noclean)  clean=0;shift;;
+    -linear)  linear=1;shift;;
+    -nolinear)  linear=0;shift;;
+    -recent)  recent=1;shift;;
+    -norecent)  recent=0;shift;;
+    -sigma1)  sigma1=1;shift;;
+    -nosigma1)  sigma1=0;shift;;
+    -sixpak)  sixpak=1;shift;;
+    -nosixpak)  sixpak=0;shift;;
+    -activate)  activate=1;shift;;
+    -noactivate)  activate=0;shift;;
+    -merger)  merger=1;shift;;
+    -nomerger)  merger=0;shift;;
+    -dictin)  dictin=1;shift;;
+    -nodictin)  dictin=0;shift;;
+    -groupie)  groupie=1;shift;;
+    -nogroupie)  groupie=0;shift;;
+    -evalplot)  evalplot=1;shift;;
+    -noevalplot)  evalplot=0;shift;;
+    -complot)  complot=1;shift;;
+    -nocomplot)  complot=0;shift;;
+    -keep)  keep=1;shift;;
+    -nokeep)  keep=0;shift;;
+    -diag)  diag=1;shift;;
+    -nodiag)  diag=0;shift;;
+    -errmax)  errmax=$2;shift 2;;
+    -xsmin)  xsmin=$2;shift 2;;
+    -group)  group=$2;shift 2;;
+    -urrbroad)  urrbroad=1;shift;;
+    -nourrbroad)  urrbroad=0;shift;;
+    *)  echo "Option [$1] invalid";exit;;
+  esac
+done
+#   
+################################################################################
+# Check for completeness and consistency of input
+################################################################################
+#   
+if [ $endffile == xxx ] ; then
+  echo " -file MUST be specified "
+  exit
+fi
+if [ $complot -eq 1 ] && [ $endffile2 == xxx ] ; then
+  echo " -file2 MUST be specified "
+  exit
+fi
+if [ $name1 == xxx ] ; then
+  name1=$endffile
+fi
+if [ $name2 == xxx ] ; then
+  name1=$endffile2
+fi
+if [ $preprodir == xxx ] ; then
+  here=1
+fi
+#   
+################################################################################
+# Set executables
+################################################################################
+#   
+Clinear=$bin'linear'$ext
+Crecent=$bin'recent'$ext
+Csigma1=$bin'sigma1'$ext
+Csixpak=$bin'sixpak'$ext
+Cactivate=$bin'activate'$ext
+Cmerger=$bin'merger'$ext
+Cdictin=$bin'dictin'$ext
+Cgroupie=$bin'groupie'$ext
+Cevalhard=$bin'evalhard'$ext
+Ccomhard=$bin'comhard'$ext
+#   
+################################################################################
+# Retrieve projectile and MAT number from ENDF file
+################################################################################
+#   
+matid="`head -2 $endffile | tail -1 | colrm 1 66 | colrm 5`"
+AWI="`head -4 $endffile | tail -1 | colrm 1  1 | colrm 11`"
+#
+### Identify projectile: neutron or other
+#
+proj=n
+if [ ${AWI:0:7} != "1.00000" ] ; then
+  proj=p
+fi
+#
+################################################################################
+# Set PREPRO input variables
+################################################################################
+#
+# Disable modules that are not allowed for particles other than neutrons
+#
+if [ $proj != n ] ; then
+  linear=0
+  recent=0
+  sigma1=0
+fi
+if [ $mergefile == xxx ] ; then
+  merger=0
+fi
+#
+################################################################################
+# Write PREPRO input files
+################################################################################
+#
+### LINEAR: Convert MF3 to linear-linear interpolation
+#
+if [ $linear -eq 1 ] ; then
+  s=`printf "%9.4e"  $xsmin`
+  e=`printf "%9.4e"  $errmax`
+  cat > LINEAR.INP << EOF 
+          0          0 $s          $keep
+LINEAR.IN
+LINEAR.OUT
+     0 0  099999999999
+                        (BLANK CARD TERMINATES MAT REQUEST RANGES)
+ 0.0000e-00 $e
+                        (BLANK CARD TERMINATES FILE 3 ERROR LAW)
+EOF
+fi
+#
+### RECENT: Reconstruct cross sections from resonance parameters
+#
+if [ $recent -eq 1 ] ; then
+  s=`printf "%9.4e"  $xsmin`
+  cat > RECENT.INP << EOF
+          0 $s          1          1          1          1
+RECENT.IN
+RECENT.OUT
+          1       9999
+                        (BLANK CARD TERMINATES MAT REQUEST RANGES)
+ 0.0000e+00 1.0000e-04
+ 1.0000e+00 1.0000e-04
+ 2.0000e+00 1.0000e-03
+ 1.0000e+09 1.0000e-03
+                        (BLANK CARD TERMINATES FILE 3 ERROR LAW)
+EOF
+fi
+#
+### SIGMA1: Doppler broadening of cross sections
+#
+if [ $sigma1 -eq 1 ] ; then
+  s=`printf "%9.4e"  $xsmin`
+  t=`printf "%6.2f"  $temp`
+  cat > SIGMA1.INP << EOF
+          0          0 $t     $s          1          $urrbroad
+SIGMA1.IN
+SIGMA1.OUT
+          1       9999
+                       (BLANK CARD TERMINATES MAT RANGE REQUESTS)
+ 0.0000e+00 1.0000e-04
+ 1.0000e+00 1.0000e-04
+ 2.0000e+00 1.0000e-03
+ 1.0000e+09 1.0000e-03
+                       (BLANK CARD TERMINATES FILE 3 ERROR LAW)
+EOF
+fi
+#
+### SIXPAK: Check double-differential data and convert to MF4,5,12,14,15
+#
+if [ $sixpak -eq 1 ] ; then
+  cat > SIXPAK.INP  << EOF
+SIXPAK.IN
+     1    1  9999  999
+EOF
+fi
+#
+### ACTIVATE: Create MF10 cross sections from MF3 and MF9
+#
+if [ $activate -eq 1 ] ; then
+  cat > ACTIVATE.INP << EOF
+ACTIVATE.IN
+ACTIVATE.OUT
+EOF
+fi
+#
+### MERGER: Merge different data files into a new consistent file
+#
+if [ $merger -eq 1 ] ; then
+  cat > MERGER.INP << EOF
+MERGER.OUT
+                                                                     0 0
+MERGER.IN
+$mergefile
+END
+  ${matid} 1  1  ${matid}99999
+  ${matid} 3203  ${matid} 3444
+                        (blank line terminate request list)
+EOF
+fi
+#
+### DICTIN: Create reaction index and update MF1
+#
+if [ $dictin -eq 1 ] ; then
+  cat > DICTIN.INP << EOF
+DICTIN.IN
+DICTIN.OUT
+EOF
+fi
+#
+### GROUPIE: Group-averaged cross sections 
+#
+if [ $groupie -eq 1 ] ; then
+  cat > GROUPIE.INP << EOF
+          0        -${group}          0         -1 1.00000-03          0   1
+GROUPIE.IN
+GROUPIE.OUT
+          1          1          1          1          1
+Groupie Test Run
+     1 1  1  999999999
+                        (blank line terminate request list)
+EOF
+fi
+#
+### EVALPLOT: Plot from data file
+#
+if [ $evalplot -eq 1 ] ; then
+  cat > EVALPLOT.INP << EOF
+        0.0       12.5        0.0        2.0          1          1 1.5
+${endffile}.pendf
+          0          0          0          0          0 1.00000-08   1
+     1 3  1            9999910999                     0          0
+ 
+  ---(this line and below is not read)----------------------------------
+     110  1            9999910999                     0          0
+     1 3  1            99999 3999                     0          0
+EOF
+fi
+#
+### COMPLOT: Plot comparison between data files
+#
+if [ $complot -eq 1 ] ; then
+  cat > COMPLOT.INP << EOF
+   0.0        12.5       0.0         10.0             1          1 2.0
+$endffile     
+$endffile2    
+          0          0          0          0          4          1   1
+ 1.00000-04
+$name1   
+$name2 
+     1 1  1             999999999                0          0
+ 
+ 
+ 
+ 
+===(this line and below is not read)===================================
+constant.dat
+sigma1.out
+          0          0          0          0          3          1
+# 1.00000-04
+Analytical
+SIGMA1
+     1 3  1             9999 3999                     0          1
+     1 3  2             9999 3  2                     0          1
+     1 3 18             9999 3 18                     0          1
+     1 3102             9999 3102                     0          1
+     1 3  1 2000.0      9999 3  1 3000.0              0          1
+     1 3  2 2000.0      9999 3  2 3000.0              0          1
+     1 3 18 2000.0      9999 3 18 3000.0              0          1
+     1 3102 2000.0      9999 3102 3000.0              0          1
+     1 3  1             9999 3  1                     0          1
+     1 3  2             9999 3  2                     0          1
+     1 3102             9999 3102                     0          1
+EOF
+fi
+#
+if [ $preprorun -eq 0 ] ; then
+  exit
+fi
+#
+################################################################################
+# Set directories
+################################################################################
+#
+curdir=`pwd`/
+if [ $here -eq 1 ] ; then
+  preprodir=$curdir
+else
+  if [ $preprodir == xxx ] ; then
+    preprodir=${curdir}/${libid}/${matid}/prepro/
+  fi
+  if [ -d $preprodir ]; then
+    rm -rf  $preprodir
+  fi
+  mkdir -p  $preprodir
+fi
+echo " Directory with results: " $preprodir
+#
+################################################################################
+# Run PREPRO
+################################################################################
+#
+echo " * Start PREPRO "
+cd $preprodir
+rm -f prepro.out
+rm -f *.IN PLOT.SYM PLOT.CHR MT.DAT
+cp $endffile prepro.cur
+#
+### LINEAR
+#
+if [ -e prepro.inp ] ; then
+  rm prepro.inp
+fi
+if [ $linear -eq 1 ] ; then
+  ln -s prepro.cur LINEAR.IN
+  echo "run linear"
+  $Clinear >> prepro.out
+  cp LINEAR.OUT prepro.cur
+  cat LINEAR.INP >> prepro.inp
+fi
+#
+### RECENT
+#
+if [ $recent -eq 1 ] ; then
+  ln -s prepro.cur RECENT.IN
+  echo "run recent"
+  $Crecent >> prepro.out
+  cp RECENT.OUT prepro.cur
+  cat RECENT.INP >> prepro.inp
+fi
+#
+### SIGMA1
+#
+if [ $sigma1 -eq 1 ] ; then
+  ln -s prepro.cur SIGMA1.IN
+  echo "run sigma1"
+  $Csigma1 >> prepro.out
+  cp SIGMA1.OUT prepro.cur
+  cat SIGMA1.INP >> prepro.inp
+fi
+#
+### SIXPAK
+#
+if [ $sixpak -eq 1 ] ; then
+  ln -s prepro.cur SIXPAK.IN
+  echo "run sixpak"
+  $Csixpak >> prepro.out
+  cat SIXPAK.INP >> prepro.inp
+fi
+#
+### ACTIVATE
+#
+if [ $activate -eq 1 ] ; then
+  ln -s prepro.cur ACTIVATE.IN
+  echo "run activate"
+  $Cactivate >> prepro.out
+  cp ACTIVATE.OUT prepro.cur
+  cat ACTIVATE.INP >> prepro.inp
+fi
+#
+### MERGER
+#
+if [ $merger -eq 1 ] ; then
+  ln -s prepro.cur MERGER.IN
+  echo "run merger"
+  $Cmerger >> prepro.out
+  cp MERGER.OUT prepro.cur
+  cat MERGER.INP >> prepro.inp
+fi
+#
+### DICTIN
+#
+if [ $dictin -eq 1 ] ; then
+  ln -s prepro.cur DICTIN.IN
+  echo "run dictin"
+  $Cdictin >> prepro.out
+  cp DICTIN.OUT prepro.cur
+  cat DICTIN.INP >> prepro.inp
+fi
+cp prepro.cur ${endffile}.pendf
+#
+### GROUPIE
+#
+if [ $groupie -eq 1 ] ; then
+  ln -s prepro.cur GROUPIE.IN
+  echo "run groupie"
+  $Cgroupie >> prepro.out
+  cp GROUPIE.OUT prepro.cur
+  cp GROUPIE.OUT ${endffile}.gendf
+  cat GROUPIE.INP >> prepro.inp
+fi
+#
+### EVALPLOT
+#
+if [ $evalplot -eq 1 ] ; then
+  ln -s ${Phome}PLOT.SYM .
+  ln -s ${Phome}PLOT.CHR .
+  ln -s ${Phome}MT.DAT .
+  echo "run evalhard"
+  $Cevalhard >> prepro.out
+  cat PLOT*.ps > ${endffile}.ps
+  ps2pdf ${endffile}.ps ${endffile}-pointwise.pdf
+  cat EVALPLOT.INP >> prepro.inp
+fi
+#
+### COMPLOT
+#
+if [ $complot -eq 1 ] ; then
+  ln -s ${Phome}PLOT.SYM .
+  ln -s ${Phome}PLOT.CHR .
+  ln -s ${Phome}MT.DAT .
+  echo "run comhard"
+  $Ccomhard >> prepro.out
+  cat PLOT*.ps > ${endffile}-comp.ps
+  ps2pdf ${endffile}-comp.ps 
+  cat COMPLOT.INP >> prepro.inp
+fi
+#
+if [ $here -eq 0 ] ; then
+  cp prepro.inp ${curdir}
+  cp prepro.log ${curdir}
+  cp output ${curdir}/output
+fi
+#
+################################################################################
+# Diagnosis of output of PREPRO codes
+################################################################################
+#
+if [ $diag -eq 1 ] ; then
+  echo "Diagnosis of PREPRO output in prepro.ers"
+  string[1]='Overflow'                                       
+  string[2]='Execution terminated'                          
+  string[3]='Unreliable'                                       
+  string[4]='Index Error'                                       
+  string[5]='Cross Section Negative'                                       
+  string[6]='Positive at Any Energy'                                       
+  string[7]='Cannot Determine'                                       
+  string[8]='You Have Turned'                                       
+  string[9]='Not in Any Resonance'                                       
+  string[10]='but Fission Data'                                       
+  string[11]='Illegal'                                       
+  string[12]='Limits MUST be'                                       
+  string[13]='will be Ignored'                                       
+  string[14]='Will be Truncated'                                       
+  string[15]='Hot Background'                                       
+  string[16]='MUST be Linearized'                                       
+  string[17]='Negative Widths'                                       
+  string[18]='NO Positive'                                       
+  string[19]='ALL Negative'                                       
+  string[20]='NOT Physicall'                                       
+  string[21]='are Missing'                                       
+  string[22]='MUST be Positive'                                       
+  string[23]='Energies MUST'                                       
+  string[24]='ERROR -'                                       
+  string[25]='Range NOT the Same'                                       
+  string[26]='Law MUST be'                                       
+  string[27]='Highest Emission'                                       
+  string[28]='Law ERROR'                                       
+  string[29]='Cannot Define'                                       
+  string[30]='Cannot Locate'                                       
+  string[31]='ERROR in Interpolation Law'                                       
+  string[32]='Negative Partials'
+  string[33]='Bad Weigths'                                       
+  string[34]='ERROR in Group'                                       
+  string[35]='NOT in DESCENDING'                                       
+  Nstring=35
+  if [ -e prepro.ers ] ; then
+    rm prepro.ers
+  fi
+  for (( i=1; i<=$Nstring; i++ )) ; do
+    grep -i "${string[i]}" prepro.out >> prepro.ers
+  done
+fi
+#
+### CLEAN UP
+#
+if [ $clean -eq 1 ] ; then
+  rm -f PLOT*.ps  ${endffile}.ps
+  rm -f *.IN *.INP *.LST *.OUT MT.DAT PLOT.CHR PLOT.SYM ENDFB.M* prepro.cur PLOTTAB.CUR
+fi
+echo "autoprepro is done"
+#Copyright (C)  2023 A.J. Koning

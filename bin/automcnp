@@ -1,0 +1,399 @@
+#!/bin/bash
+#
+#
+echo
+echo "       automcnp-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo
+echo $0 $@
+echo
+if [ $# -eq 0 ] ; then
+  echo "automcnp                                                                automcnp"
+  echo
+  echo "NAME"
+  echo "       automcnp - Script to make input file for MCNP, run MCNP and post-process the results"
+  echo
+  echo "SYNOPSIS"
+  echo "       automcnp [option] [value]"
+  echo
+  echo "DESCRIPTION"
+  echo "       With automcnp, a simple MCNP run is performed to test the quality of an "
+  echo "       ACE file. The MCNP executable and specific input options can be set."
+# 
+################################################################################
+# Test input and output of all options
+################################################################################
+#
+  echo
+  echo "   Operation mode:"
+  echo
+  echo "       Usage: automcnp [option] [value]"
+  echo
+  echo "       Some option flags should be accompanied by a value"
+  echo
+  echo "       Examples: automcnp -file mcnp_lib -xsdir mcnp_xs (obligatory: ACE file and xsdir entry)"
+  echo "                 automcnp -file mcnp_lib -xsdir mcnp_xs -bin /home/raynal/bin/ -version mcnp.mine -noplot"
+  echo "                    (special MCNP executable, no plotting)"
+  echo
+  echo "   General options"
+  echo
+  echo "       -file [ACE file] "
+  echo "             ACE filename [no default]"
+  echo
+  echo "       -xsdir [filename] "
+  echo "            xsdir entry [no default]"
+  echo
+  echo "       -bin [path name] "
+  echo "            Full pathname for MCNP binary [default: none]"
+  echo
+  echo "       -version [MCNP name] "
+  echo "                Name of MCNP binary [default: mcnp99.364.jcs]"
+  echo
+  echo "       -[no]here "
+  echo "                 Run NJOY here or in other (automatically created) directory [default: -here]"
+  echo
+  echo "       -mcnpdir [path name] "
+  echo "                Full pathname for MCNP results [default: none]"
+  echo
+  echo "       -[no]mcnprun "
+  echo "                   Run MCNP or just produce the input file [default: -mcnprun]"
+  echo
+  echo "       -[no]plot "
+  echo "                  Make MCNP plots [default: -plot]"
+  echo
+  echo "       -[no]clean "
+  echo "                  Clean up result [default: -noclean]"
+  echo
+  echo "AUTHOR"
+  echo "       automcnp was written by Arjan Koning."
+  exit
+fi
+#
+################################################################################
+# Initialization (default values) of variables
+################################################################################
+#
+Thome=/Users/koning/
+bin=$Thome'bin/'
+version='mcnp99.364.jcs'
+mcnp="/home/finux01a/mcnp/bin/mcnp4C3_20070629"
+mcnpx="/home/finux01a/reactor/codes/mpi/mpich1-64/mpich-1.2.7p1/bin/mpirun /home/finux01a/reactor/cbin/q0/mcnpx26F_20100215"
+acefile=xxx
+xsdir=xxx
+mcnpdir=xxx
+here=1
+mcnprun=1
+plot=1
+clean=0
+#
+################################################################################
+# Read command line arguments
+################################################################################
+#
+while [ $# -ge 1 ] ; do
+  case $1 in
+    -file)  acefile=$2;shift 2;;
+    -bin)  bin=$2;shift 2;;
+    -version)  version=$2;shift 2;;
+    -here)  here=1;shift;;
+    -nohere)  here=0;shift;;
+    -xsdir)  xsdir=$2;shift 2;;
+    -mcnprun)  mcnprun=1;shift;;
+    -nomcnprun)  mcnprun=0;shift;;
+    -plot)  plot=1;shift;;
+    -noplot)  plot=0;shift;;
+    -clean)  clean=1;shift;;
+    -noclean)  clean=0;shift;;
+    *)  echo "Option [$1] invalid";exit;;
+  esac
+done
+#   
+################################################################################
+# Check for completeness and consistency of input
+################################################################################
+#   
+if [ $acefile == xxx ] ; then
+  echo " -file MUST be specified "
+  exit
+fi
+if [ $xsdir == xxx ] ; then
+  echo " -xsdir MUST be specified "
+  exit
+fi
+if [ $mcnpdir == xxx ] ; then
+  here=1
+fi
+#
+################################################################################
+# Set codes and paths
+################################################################################
+#
+mcpost=$Thome'mcnp/bin/mcpost'
+xsdirorg=$Thome'tefal/misc/xsdir'
+#
+###  Make xsdir-file
+#  
+mcnpid=`head -1 ${acefile} | awk '{print $1}'`
+grep -v "^ *${mcnpid}"  $xsdirorg  >  ./xsdir
+cat  ${xsdir}            >>  xsdir
+#
+# - Convert temperature to 'Boltzmann units'.
+#
+echo " * Make MCNP input file "
+mcnptemp=`head -1 ${acefile} | awk '{print $3}'`
+ident=`head -2 ${acefile} | tail -1 | awk '{print $1}'`
+particle=n
+lastch=`expr substr $mcnpid ${#mcnpid} 1`
+if [ $lastch == h ] ; then
+  particle=h
+fi
+if [ $lastch == u ] ; then
+  particle=p
+fi
+if [ $particle != n ] ; then
+  mcnptemp=2.5263E-08
+fi
+#
+################################################################################
+# Write MCNP input file
+################################################################################
+#
+cat  <<  EOI  >  inp
+message: ixr mctal=mctal1
+
+  Simple 1D ${ident} shield; inf. diluted ${libid} cross sections
+  1   0             -1  5 -6  imp:n,p=1  tmp=${mcnptemp}   \$  interior
+  2   0          1  -2  5 -6  imp:n,p=1  tmp=${mcnptemp}   \$  source
+  3   0          2  -3  5 -6  imp:n,p=1  tmp=${mcnptemp}   \$  region between source and blanket
+  4   1  0.08    3  -4  5 -6  imp:n,p=1  tmp=${mcnptemp}   \$  cylindrical blanket
+  5   0              4:-5: 6  imp:n,p=0  tmp=0             \$  outer world
+
+  1 cz      2.0  \$  source-defining cylinders
+  2 cz      3.0
+  3 cz     10.0  \$  cylindrical blanket
+  4 cz     40.0
+ *5 pz   -100.0  \$  upper and lower planes
+ *6 pz    100.0
+
+EOI
+if [ "${particle}" == "p" ] || [ $particle == n ]; then
+  cat << EOI  >> inp
+  mode     ${particle}     \$  $particle problem
+EOI
+else
+  cat << EOI  >> inp
+  mode     ${particle} p   \$  coupled (n,p) problem
+EOI
+fi
+cat << EOI  >> inp
+  phys:p   1j 1  \$  no electrons
+  nonu           \$  no fission
+EOI
+if [ $particle != n ] ; then
+  cat << EOI  >> inp
+  lca      0 0 0
+EOI
+fi
+if [ $particle == n ] ; then
+  cat << EOI  >> inp
+  sdef cel=2 pos=0 0 0 rad=d2 ext=d3 axs=0 0 1 erg=d1 eff=0.001
+EOI
+else
+  cat << EOI  >> inp
+  sdef par=${particle} cel=2 pos=0 0 0 rad=d2 ext=d3 axs=0 0 1 erg=d1 eff=0.001
+EOI
+fi
+cat << EOI  >> inp
+c
+c 1/E spectrum between 1e-5 eV and 200.0 MeV
+c
+c sp1   -7  1.0e-11  150
+c sp1        0   1       
+c si1   h   1.0e-11  150 
+  si1 h 1e-11 1e-10 1e-9 1e-8 1e-7 1e-6 1e-5 1e-4 1e-3 1e-2 1e-1 1 10 150
+  sp1   0     1    1    1    1   1    1    1   1    1    1    1  1  1
+  si2   h    2   3
+  sp2        0   1
+  si3   h -100 100
+  sp3        0   1
+c
+  m1      ${mcnpid}  1   \$  m1: ${ident}
+  nps     20000
+  print
+  prdmp   2j 1 2         \$  create mctal file; max. 2 dumps on runtpe
+  tailcr  4j 1           \$  enable mf=13 photons with ptables
+  thtme   0
+c
+c XMAS group structure, extended up to 200 MeV
+c
+  e0  3.0000e-9 5.0000e-9 6.9000e-9 1.0000e-8 1.5000e-8 2.0000e-8 2.5000e-8
+      3.0000e-8 3.5000e-8 4.2000e-8 5.0000e-8 5.8000e-8 6.7000e-8 7.7000e-8
+      8.0000e-8 9.5000e-8 1.0000e-7 1.1500e-7 1.3400e-7 1.4000e-7 1.6000e-7
+      1.8000e-7 1.8900e-7 2.2000e-7 2.4800e-7 2.8000e-7 3.0000e-7 3.1450e-7
+      3.2000e-7 3.5000e-7 3.9100e-7 4.0000e-7 4.3300e-7 4.8500e-7 5.0000e-7
+      5.4000e-7 6.2500e-7 7.0500e-7 7.8000e-7 7.9000e-7 8.5000e-7 8.6000e-7
+      9.1000e-7 9.3000e-7 9.5000e-7 9.7200e-7 9.8600e-7 9.9600e-7 1.0200e-6
+      1.0350e-6 1.0450e-6 1.0710e-6 1.0970e-6 1.1100e-6 1.1254e-6 1.1500e-6
+      1.1700e-6 1.2350e-6 1.3000e-6 1.3375e-6 1.3700e-6 1.4450e-6 1.4750e-6
+      1.5000e-6 1.5900e-6 1.6700e-6 1.7550e-6 1.8400e-6 1.9300e-6 2.0200e-6
+      2.1000e-6 2.1300e-6 2.3600e-6 2.5500e-6 2.6000e-6 2.7200e-6 2.7679e-6
+      3.3000e-6 3.3807e-6 4.0000e-6 4.1292e-6 5.0435e-6 5.3464e-6 6.1601e-6
+      7.5240e-6 8.3153e-6 9.1898e-6 9.9055e-6 1.1225e-5 1.3710e-5 1.5928e-5
+      1.9455e-5 2.2603e-5 2.4980e-5 2.7608e-5 3.0511e-5 3.3720e-5 3.7267e-5
+      4.0169e-5 4.5517e-5 4.8252e-5 5.1578e-5 5.5595e-5 6.7904e-5 7.5674e-5
+      9.1661e-5 1.3674e-4 1.4863e-4 2.0400e-4 3.0432e-4 3.7170e-4 4.5400e-4
+      6.7729e-4 7.4852e-4 9.1424e-4 1.0104e-3 1.2341e-3 1.4338e-3 1.5073e-3
+      2.0347e-3 2.2487e-3 3.3546e-3 3.5266e-3 5.0045e-3 5.5308e-3 7.4659e-3
+      9.1188e-3 1.1138e-2 1.5034e-2 1.6616e-2 2.4788e-2 2.7394e-2 2.9283e-2
+      3.6979e-2 4.0868e-2 5.5166e-2 6.7380e-2 8.2298e-2 1.1109e-1 1.2277e-1
+      1.8316e-1 2.4724e-1 2.7324e-1 3.0197e-1 4.0762e-1 4.5049e-1 4.9787e-1
+      5.5023e-1 6.0810e-1 8.2085e-1 9.0718e-1 1.0026e+0 1.1080e+0 1.2246e+0
+      1.3534e+0 1.6530e+0 2.0190e+0 2.2313e+0 2.4660e+0 3.0119e+0 3.6788e+0
+      4.4933e+0 5.4881e+0 6.0653e+0 6.7032e+0 8.1873e+0 1.0000e+1 1.1618e+1
+      1.3840e+1 1.4918e+1 1.7333e+1 1.9640e+1 2.5000e+1 3.0000e+1 3.5000e+1
+      4.0000e+1 4.5000e+1 5.0000e+1 5.5000e+1 6.0000e+1 6.5000e+1 7.0000e+1
+      7.5000e+1 8.0000e+1 8.5000e+1 9.0000e+1 9.5000e+1 1.0000e+2 1.0500e+2
+      1.1000e+2 1.1500e+2 1.2000e+2 1.2500e+2 1.3000e+2 1.3500e+2 1.4000e+2
+      1.4500e+2 1.5000e+2 1.5500e+2 1.6000e+2 1.6500e+2 1.7000e+2 1.7500e+2
+      1.8000e+2 1.8500e+2 1.9000e+2 1.9500e+2 2.0000e+2
+c
+  fc4       ${particle} flux   at D = 0 - 30 cm
+  fc6       ${particle} heating at D = 0 - 30 cm
+  fc504     photon  flux    at D = 0 - 30 cm
+  fc506     photon heating  at D = 0 - 30 cm
+  f4:${particle}      (4)
+  f6:${particle}      (4)
+  f504:p    (4)
+  f506:p    (4)
+c
+EOI
+#
+################################################################################
+# Set directories
+################################################################################
+#
+curdir=`pwd`/
+if [ $here -eq 1 ] ; then
+  mcnpdir=$curdir
+else
+  if [ $mcnpdir == xxx ] ; then
+    mcnpdir=${curdir}/${libid}/${temp}/${matid}/mcnp/
+  fi
+  if [ -d $mcnpdir ]; then
+    rm -rf  $mcnpdir
+  fi
+  mkdir -p  $mcnpdir
+fi
+echo " Directory with results: " $mcnpdir
+#
+################################################################################
+# Run MCNP and copy the input and output
+################################################################################
+#
+if [ $particle == n ] ; then
+  code=$mcnp
+else
+  code=$mcnpx
+fi
+rm -f  outp mctal1 filename
+ln -s $acefile filename
+echo " * Run MCNP "
+${code}  i=inp  >  mcnp.stdout
+echo " * MCNP done "
+cp      mcnp.stdout  ${mcnpdir}
+cp      inp          ${mcnpdir}/mcnp.i
+cp      outp         ${mcnpdir}/mcnp.o
+cp      mctal1       ${mcnpdir}/mcnp.m
+cd                   ${mcnpdir}
+ln -sf  mcnp.m  mctal
+#
+################################################################################
+# Make plots of MCNP output 
+################################################################################
+#
+if [ $plot -eq 1 ] ; then
+  cd  ${mcnpdir}
+  for  tal  in  4 6 504 506
+  do
+    rm -f  mclist.dat
+    ${mcpost}  <<  EOF             >  mcpost.tal${tal}
+     ${tal}
+EOF
+    grep -v "^ *[0-9][0-9]*  *0\.00* "  mclist.dat  >  mclist.tal${tal}
+  done
+  gnuplot  <<  EOF
+set term postscript enhanced color "Helvetica" 16
+set output "mcnp.ps"
+set log x
+set log y
+set xrange [1e-11:5e2]
+set ylabel "{/Symbol j}"
+set xlabel "E_n [MeV]"
+set xtics ( "10^{-10}" 1e-10, "" 1e-9, "10^{-8}" 1e-8, "" 1e-7, "10^{-6}" 1e-6, \
+             "" 1e-5, "10^{-4}" 1e-4,  "" 1e-3, "10^{-2}" 1e-2, "" 1e-1, "1" 1, \
+             "" 1e1 , "10^2"    1e2,   "" 1e3 , "10^4"    1e4,  "" 1e5 ,        \
+                      "10^6"    1e6,   "" 1e7 , "10^8" 1e8 )
+set ytics ( "10^{-20}" 1e-20, "" 1e-19, "10^{-18}" 1e-18, "" 1e-17, \
+            "10^{-16}" 1e-16, "" 1e-15, "10^{-14}" 1e-14, "" 1e-13, \
+            "10^{-12}" 1e-12, "" 1e-11, "10^{-10}" 1e-10, "" 1e-9 , \
+            "10^{-8}"  1e-8 , "" 1e-7 , "10^{-6}"  1e-6 , "" 1e-5 , \
+            "10^{-4}"  1e-4 , "" 1e-3 , "10^{-2}"  1e-2 , "" 1e-1 , \
+                  "1"  1    , "" 1e1  , "10^{2}"   1e2  , "" 1e3  , \
+            "10^{4}"   1e4  , "" 1e5  , "10^{6}"   1e6  , "" 1e7  , \
+            "10^{8}"   1e8  , "" 1e9  , "10^{10}"  1e10 , "" 1e11 , \
+            "10^{12}"  1e12 , "" 1e13 , "10^{14}"  1e14 , "" 1e15 , \
+            "10^{16}"  1e16 , "" 1e17 , "10^{18}"  1e18 , "" 1e19 )
+set title "{/Times-Roman=30  ^{$mass}$element}  ${libid};  T = ${temp} K"
+plot  "mclist.tal4"   using 2:6  title "neutron flux"    with lines lt 1, \
+      "mclist.tal6"   using 2:6  title "neutron heating" with lines lt 2, \
+      "mclist.tal504" using 2:6  title " photon flux"    with lines lt 3, \
+      "mclist.tal506" using 2:6  title " photon heating" with lines lt 4
+EOF
+  \cp mcnp.ps ${curdir}
+fi
+#
+################################################################################
+# Diagnosis of output of MCNP
+################################################################################
+#
+if [ $diag -eq 1 ] ; then
+  echo "Diagnosis of MCNP output in mcnp.ers"
+  string[1]='expression must not'                               
+  string[2]='no isotope found'
+  string[3]='no photon mt selected'                                   
+  string[4]='photonuclear coll. nuclide not found'                       
+  string[5]='photonuclear yield multiplier mt wrong'        
+  string[6]='photonuclear reaction type not found'         
+  string[7]='unexpected eof'                          
+  string[8]='unknown isr'                                       
+  string[9]='cross-section directory file'                   
+  string[10]='insufficient floating'                          
+  string[11]='dynamic memory error'                             
+  string[12]='Invalid particle type'                             
+  string[13]='overflow particle save stack'                            
+  string[14]='too many cases of erg'                           
+  string[15]='prob table not normed'                              
+  string[16]='total inelastic mt not in table'                    
+  string[17]='other abs mt not in table'                          
+  string[18]='Particle type is not implemented'                  
+  string[19]='Could not find nuclide'                           
+  string[20]='tallyx is in an endless loop'                         
+  string[21]='insufficient'                                       
+  string[22]='trouble'                                       
+  Nstring=22
+  if [ -e mcnp.ers ] ; then
+    rm mcnp.ers
+  fi
+  for (( i=1; i<=$Nstring; i++ )) ; do
+    grep -i "${string[i]}" output >> mcnp.ers
+  done
+fi
+#
+### CLEAN UP
+#
+if [ $clean -eq 1 ] ; then
+  cd  ${curdir}
+  rm -rf ${libid}
+  rm -f tape* 
+fi
+echo "automcnp is done"
+#Copyright (C)  2023 A.J. Koning

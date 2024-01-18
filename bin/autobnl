@@ -1,0 +1,461 @@
+#!/bin/bash
+#
+#
+echo
+echo "       autobnl-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo
+echo $0 $@
+echo
+if [ $# -eq 0 ] ; then
+  echo "autobnl                                                               autobnl"
+  echo
+  echo "NAME"
+  echo "       autobnl - Script to make input file for BNL checking codes and running them"
+  echo
+  echo "SYNOPSIS"
+  echo "       autobnl [option] [value]"
+  echo
+  echo "DESCRIPTION"
+  echo "       With autobnl, various modules of the BNL checking codes can be invoked in, or left out of,"
+  echo "       an input file. Specific input options can be set."
+# 
+################################################################################
+# Test input and output of all options
+################################################################################
+#
+  echo
+  echo "   Operation mode:"
+  echo
+  echo "       Usage: autobnl [option] [value]"
+  echo
+  echo "       Some option flags should be accompanied by a value"
+  echo
+  echo "       Examples: autobnl -file Nb093-n.tendl (obligatory: ENDF-6 file)"
+  echo "                 autobnl -file Nb093-n.tendl -bin /home/raynal/bin/ -nopsyche"
+  echo "                          (special BNL bin directory, skip PSYCHE)"
+  echo
+  echo "   General options: file to be processed, BNL code version, pathnames, etc."
+  echo
+  echo "       -file [ENDF file] "
+  echo "             ENDF filename [no default]"
+  echo
+  echo "       -bin [path name] "
+  echo "            Full pathname for BNL binaries [default: none]"
+  echo
+  echo "       -ext [name] "
+  echo "            Extension to executables, e.g. C [default: blank]"
+  echo
+  echo "       -outmode [value] "
+  echo "                mode for output filename, 1: checkr.out 2: 'ENDF file'.checkr [default: 1]"
+  echo
+  echo "       -[no]diag "
+  echo "                  Diagnosis of output [default: -diag]"
+  echo
+  echo "       -[no]clean "
+  echo "                  Clean up working directories [default: -noclean]"
+  echo
+  echo "   Specific BNL modules"
+  echo
+  echo "        -[no]checkr "
+  echo "                   Run CHECKR [default: -checkr]"
+  echo
+  echo "        -[no]fizcon "
+  echo "                   Run FIZCON [default: -fizcon]"
+  echo
+  echo "        -[no]psyche "
+  echo "                   Run PSYCHE [default: -psyche]"
+  echo
+  echo "        -[no]inter "
+  echo "                   Run INTER [default: -inter]"
+  echo
+  echo "   BNL input parameters"
+  echo
+  echo "        -[no]deviant "
+  echo "                   Deviant point test for FIZCON [default: -nodeviant]"
+  echo
+  echo "        -[no]sumup "
+  echo "                   Sumup test for FIZCON [default: -nosumup]"
+  echo
+  echo "        -err [error] "
+  echo "             Allowable fractional error for FIZCON [default: 0.01]"
+  echo
+  echo "AUTHOR"
+  echo "       autobnl was written by Arjan Koning."
+  exit
+fi
+#
+################################################################################
+# Initialization (default values) of variables
+################################################################################
+#
+Thome=/Users/koning/
+bin=$Thome'bin/'
+endffile=xxx
+outmode=1
+clean=0
+checkr=1
+fizcon=1
+psyche=1
+inter=1
+diag=1
+deviant=0
+sumup=0
+ext=
+err=0.01
+#
+################################################################################
+# Read command line arguments
+################################################################################
+#
+while [ $# -ge 1 ] ; do
+  case $1 in
+    -file)  endffile=$2;shift 2;;
+    -bin)  bin=$2;shift 2;;
+    -ext)  ext=$2;shift 2;;
+    -outmode)  outmode=$2;shift 2;;
+    -clean)  clean=1;shift;;
+    -noclean)  clean=0;shift;;
+    -checkr)  checkr=1;shift;;
+    -nocheckr)  checkr=0;shift;;
+    -fizcon)  fizcon=1;shift;;
+    -nofizcon)  fizcon=0;shift;;
+    -psyche)  psyche=1;shift;;
+    -nopsyche)  psyche=0;shift;;
+    -inter)  inter=1;shift;;
+    -nointer)  inter=0;shift;;
+    -deviant)  deviant=1;shift;;
+    -nodeviant)  deviant=0;shift;;
+    -diag)  diag=1;shift;;
+    -nodiag)  diag=0;shift;;
+    -sumup)  sumup=1;shift;;
+    -nosumup)  sumup=0;shift;;
+    -err)  err=$2;shift 2;;
+    *)  echo "Option [$1] invalid";exit;;
+  esac
+done
+#   
+################################################################################
+# Check for completeness and consistency of input
+################################################################################
+#   
+if [ $endffile == xxx ] ; then
+  echo " -file MUST be specified "
+  exit
+fi
+#
+################################################################################
+# Set executables
+################################################################################
+#
+Ccheckr=$bin'checkr'$ext
+Cfizcon=$bin'fizcon'$ext
+Cpsyche=$bin'psyche'$ext
+Cinter=$bin'inter'$ext
+#   
+################################################################################
+# Retrieve projectile from ENDF file
+################################################################################
+#   
+AWI="`head -4 $endffile | tail -1 | colrm 1  1 | colrm 11`"
+#
+### Identify projectile: neutron or other
+#
+proj=n
+if [ $AWI != "1.000000+0" ] && [ $AWI != "1.00000000" ]; then
+  proj=p
+fi
+#
+# Disable modules that are not allowed for particles other than neutrons
+#
+if [ $proj != n ] ; then
+  inter=0
+fi
+#
+################################################################################
+# Write BNL input files
+################################################################################
+#
+### CHECKR
+#
+if [ $checkr -eq 1 ] ; then
+  if [ $outmode -eq 1 ] ; then
+    outfile_checkr=checkr.out
+  else
+    outfile_checkr=${endffile}.checkr
+  fi
+  cat > checkr.inp << EOI
+$endffile
+$outfile_checkr
+
+DONE
+EOI
+fi
+#
+### FIZCON
+#
+if [ $fizcon -eq 1 ] ; then
+  if [ $outmode -eq 1 ] ; then
+    outfile_fizcon=fizcon.out
+  else
+    outfile_fizcon=${endffile}.fizcon
+  fi
+  standard=y
+  devflag=n
+  sumflag=n
+  if [ $deviant -eq 1 ] ; then
+    devflag=y
+    standard=n
+  fi
+  if [ $sumup -eq 1 ] ; then
+    sumflag=y
+    standard=n
+  fi
+  cat > fizcon.inp << EOI
+$endffile
+$outfile_fizcon
+$standard
+
+EOI
+  if [ $standard == y ] ; then
+    cat >> fizcon.inp << EOI
+
+DONE
+EOI
+  else
+    cat >> fizcon.inp << EOI
+$devflag
+$sumflag
+$err
+DONE
+EOI
+  fi
+fi
+#
+### PSYCHE
+#
+if [ $psyche -eq 1 ] ; then
+  if [ $outmode -eq 1 ] ; then
+    outfile_psyche=psyche.out
+  else
+    outfile_psyche=${endffile}.psyche
+  fi
+  cat > psyche.inp << EOI
+$endffile
+$outfile_psyche
+
+DONE
+EOI
+fi
+#
+### INTER
+#
+if [ $inter -eq 1 ] ; then
+  if [ $outmode -eq 1 ] ; then
+    outfile_inter=inter.out
+  else
+    outfile_inter=${endffile}.inter
+  fi
+  interfile=$outfile_inter
+  cat > inter.inp << EOI
+$endffile
+$outfile_inter
+N
+
+1.4e7
+0.0005
+Y
+3.e4
+1.e-5, 2.e7
+Y
+0.50, 2.e6
+Y
+1.36e6
+1., 2.e7
+DONE
+EOI
+fi
+#
+################################################################################
+# Run BNL codes
+################################################################################
+#
+echo " * Start BNL codes "
+rm -f check.log
+#
+### CHECKR
+#
+if [ $checkr -eq 1 ] ; then
+  echo "run CHECKR"
+  $Ccheckr < checkr.inp >> check.log
+fi
+#
+### FIZCON
+#
+if [ $fizcon -eq 1 ] ; then
+  echo "run FIZCON"
+  $Cfizcon < fizcon.inp >> check.log
+fi
+#
+### PSYCHE
+#
+if [ $psyche -eq 1 ] ; then
+  echo "run PSYCHE"
+  $Cpsyche < psyche.inp >> check.log
+fi
+#
+### INTER
+#
+if [ $inter -eq 1 ] ; then
+  echo "run INTER"
+  $Cinter < inter.inp >> check.log
+fi
+#
+################################################################################
+# Diagnosis of output of BNL codes
+################################################################################
+#
+if [ $diag -eq 1 ] ; then
+  if [ $checkr -eq 1 ] ; then
+    echo "Diagnosis of CHECKR output in checkr.ers"
+    string[1]='not'
+    string[2]='missing'
+    string[3]='incorrect'
+    string[4]='out of' 
+    string[5]='require'
+    string[6]='invalid'
+    string[7]='misplaced'
+    string[8]='error in' 
+    string[9]='allowed'
+    string[10]='should be' 
+    string[11]='repeated'
+    string[12]='too'
+    string[13]='must be' 
+    string[14]='only one' 
+    string[15]='in error'
+    Nstring=15
+    if [ -e checkr.ers ] ; then
+      rm checkr.ers
+    fi
+    for (( i=1; i<=$Nstring; i++ )) ; do
+      grep -i "${string[i]}" $outfile_checkr >> checkr.ers
+    done
+  fi
+  if [ $fizcon -eq 1 ] ; then
+    echo "Diagnosis of FIZCON output in fizcon.ers"
+    string[1]='error '
+    string[2]='zero'
+    string[3]='could not'
+    string[4]='incorrect'
+    string[5]='too'
+    string[6]='out of'
+    string[7]='must'
+    string[8]=' le '
+    string[9]='should'
+    string[10]='greater'
+    string[11]='misplaced'
+    string[12]='cannot'
+    string[13]='only'
+    string[14]='invalid'
+    string[15]='exceed'
+    string[16]='does not'
+    string[17]='are out'
+    string[18]='not con'
+    string[19]='is not'
+    string[20]='do not'
+    string[21]='requires that'
+    string[22]='conflict'
+    string[23]='no fis'
+    string[24]='permit'
+    string[25]='allow'
+    string[26]='unreasonable'
+    string[27]=' ap '
+    string[28]='missing'
+    string[29]='ial, not'
+    string[30]='can not'
+    string[31]='format'
+    string[32]='fail'
+    string[33]='not in in'
+    string[34]='not comp'
+    string[35]='inconsistent'
+    string[36]='negative'
+    string[37]='fl not'
+    string[38]='not in range'
+    string[39]='check normalization'
+    string[40]='wrong'
+    Nstring=40
+    if [ -e fizcon.ers ] ; then
+      rm fizcon.ers
+    fi
+    for (( i=1; i<=$Nstring; i++ )) ; do
+      grep -i "${string[i]}" $outfile_fizcon >> fizcon.ers
+    done
+  fi
+  if [ $psyche -eq 1 ] ; then
+    echo "Diagnosis of PSYCHE output in psyche.ers"
+    string[1]='not'                                       
+    string[2]='missing'                                       
+    string[3]='incorrect'                                       
+    string[4]='out of'                                       
+    string[5]='require'                                       
+    string[6]='invalid'                                       
+    string[7]='misplaced'                                       
+    string[8]='error in'                                       
+    string[9]='allowed'                                       
+    string[10]='should be'                                       
+    string[11]='repeated'                                       
+    string[12]='too'                                       
+    string[13]='must be'                                       
+    string[14]='only one'                                       
+    string[15]='in error'                                       
+    string[16]='error '                                       
+    string[17]='zero'                                       
+    string[18]='could not'                                       
+    string[19]='incorrect'                                       
+    string[20]='too'                                       
+    string[21]='out of'                                       
+    string[22]='must'                                       
+    string[23]=' le '                                       
+    string[24]='should'                                       
+    string[25]='greater'                                       
+    string[26]='misplaced'                                       
+    string[27]='cannot'                                       
+    string[28]='only'                                       
+    string[29]='invalid'                                       
+    string[30]='exceed'                                       
+    string[31]='does not'                                       
+    string[32]='are out'                                       
+    string[33]='not con'                                       
+    string[34]='is not'                                       
+    string[35]='do not'                                       
+    string[36]='requires that'                                       
+    string[37]='conflict'                                       
+    string[38]='no fis'                                       
+    string[39]='permit'                                       
+    string[40]='allow'                                       
+    string[41]='unreasonable'                                       
+    string[42]=' ap '                                       
+    string[43]='missing'                                       
+    string[44]='ial, not'                                       
+    string[45]='can not'                                       
+    string[46]='fail'                                       
+    string[47]='probability'                                       
+    string[48]='not in in'                                       
+    string[49]='not comp'                                       
+    Nstring=49
+    if [ -e psyche.ers ] ; then
+      rm psyche.ers
+    fi
+    for (( i=1; i<=$Nstring; i++ )) ; do
+      grep -i "${string[i]}" $outfile_psyche >> psyche.ers
+    done
+  fi
+fi
+################################################################################
+# Clean up
+################################################################################
+#
+if [ $clean -eq 1 ] ; then
+  rm -f checkr.inp fizcon.inp psyche.inp inter.inp
+fi
+echo "autobnl is done"
+#Copyright (C)  2023 A.J. Koning

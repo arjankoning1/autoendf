@@ -1,0 +1,141 @@
+#!/bin/bash
+#
+#
+echo
+echo "       autofudge-1.0 (Version December 29 2023) (C) Copyright 2033 Arjan Koning, All Rights Reserved"
+echo
+echo $0 $@
+echo
+if [ $# -eq 0 ] ; then
+  echo "autofudge                                                           autofudge"
+  echo
+  echo "NAME"
+  echo "       autofudge - Script to make input file for FUDGE checking and translation codes and running them"
+  echo
+  echo "SYNOPSIS"
+  echo "       autofudge [option] [value]"
+  echo
+  echo "DESCRIPTION"
+  echo "       With autofudge, various modules of the FUDGE codes can be invoked."
+  echo "       Specific input options can be set."
+# 
+################################################################################
+# Test input and output of all options
+################################################################################
+#
+  echo
+  echo "   Operation mode:"
+  echo
+  echo "       Usage: autofudge [option] [value]"
+  echo
+  echo "       Some option flags should be accompanied by a value"
+  echo
+  echo "       Examples: autofudge -file Nb093-n.tendl (obligatory: ENDF-6 file)"
+  echo "                 autofudge -file Nb093-n.tendl -bin /home/raynal/bin/ "
+  echo "                          (special FUDGE bin directory)"
+  echo
+  echo "   General options: file to be processed, FUDGE code version, pathnames, etc."
+  echo
+  echo "       -file [ENDF file] "
+  echo "             ENDF filename [no default]"
+  echo
+  echo "       -bin [path name] "
+  echo "            Full pathname for FUDGE binaries [default: none]"
+  echo
+  echo "       -[no]diag "
+  echo "                  Diagnosis of output [default: -diag]"
+  echo
+  echo "       -[no]clean "
+  echo "                  Clean up working directories [default: -noclean]"
+  echo
+  echo "AUTHOR"
+  echo "       autofudge was written by Arjan Koning."
+  exit
+fi
+#
+################################################################################
+# Initialization (default values) of variables
+################################################################################
+#
+Thome=/Users/koning/
+fudgepath=$Thome'tools/fudge-4.2.1/'
+bin=$fudgepath'bin/'
+endffile=xxx
+diag=1
+clean=0
+#
+################################################################################
+# Read command line arguments
+################################################################################
+#
+while [ $# -ge 1 ] ; do
+  case $1 in
+    -file)  endffile=$2;shift 2;;
+    -bin)  bin=$2;shift 2;;
+    -diag)  diag=1;shift;;
+    -nodiag)  diag=0;shift;;
+    -clean)  clean=1;shift;;
+    -noclean)  clean=0;shift;;
+    *)  echo "Option [$1] invalid";exit;;
+  esac
+done
+#   
+################################################################################
+# Check for completeness and consistency of input
+################################################################################
+#   
+if [ $endffile == xxx ] ; then
+  echo " -file MUST be specified "
+  exit
+fi
+#
+################################################################################
+# Set executables
+################################################################################
+#
+rePrint=$bin'rePrint.py'
+runChecker=$fudgepath'runChecker.py'
+#   
+################################################################################
+# Run FUDGE
+################################################################################
+#
+echo " * Start FUDGE codes "
+#
+$rePrint --skipBadData $endffile  > fudge.out 2>&1
+colrm < $endffile > file80 81
+diff  test.endf6.noLineNumbers test.endf6.orig.noLineNumbers > fudge.dif
+python $runChecker test.endf6.xml >> fudge.out
+#
+################################################################################
+# Diagnosis of output of FUDGE
+################################################################################
+#
+if [ $diag -eq 1 ] ; then
+  echo "Diagnosis of FUDGE output in fudge.ers"
+  string[1]='should be'
+  string[2]='Energy imbalance'
+  string[3]='Unnormalized'
+  string[4]='disagree' 
+  string[5]='Domain'
+  string[6]='Error'
+  string[7]='parse'
+  string[8]='out of order'
+  string[9]='unknown'
+  string[10]='too low'
+  Nstring=10
+  if [ -e fudge.ers ] ; then
+    rm fudge.ers
+  fi
+  for (( i=1; i<=$Nstring; i++ )) ; do
+    grep -i "${string[i]}" output >> fudge.ers
+  done
+fi
+#
+### CLEAN UP
+#
+if [ $clean -eq 1 ] ; then
+  rm -f test.endf6.* 
+fi
+echo "autofudge is done"
+#Copyright (C)  2023 A.J. Koning

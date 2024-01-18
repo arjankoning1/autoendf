@@ -1,0 +1,797 @@
+#!/bin/bash
+#
+#
+echo
+echo "       autonjoy-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo
+echo $0 $@
+echo
+if [ $# -eq 0 ] ; then
+  echo "autonjoy                                                                autonjoy"
+  echo
+  echo "NAME"
+  echo "       autonjoy - Script to make input file for NJOY, run NJOY and post-process the results"
+  echo
+  echo "SYNOPSIS"
+  echo "       autonjoy [option] [value]"
+  echo
+  echo "DESCRIPTION"
+  echo "       With autonjoy, various modules of NJOY can be invoked in, or left out of,"
+  echo "       an NJOY input file. The NJOY executable and specific input options can be set."
+# 
+################################################################################
+# Test input and output of all options
+################################################################################
+#
+  echo
+  echo "   Operation mode:"
+  echo
+  echo "       Usage: autonjoy -file <endf file> [option] [value]"
+  echo
+  echo "       Some option flags should be accompanied by a value"
+  echo
+  echo "       Examples: autonjoy -file Nb093-n.tendl (obligatory: ENDF-6 file)"
+  echo "                 autonjoy -file Nb093-n.tendl -bin /home/raynal/bin/ -version njoy99.mine -nogaspr -bins 24"
+  echo "                          (special NJOY executable, skip GASPR, use 24 probability bins for PURR)"
+  echo
+  echo "   General options: file to be processed, NJOY version, pathnames, etc."
+  echo
+  echo "       -file [ENDF file] "
+  echo "             ENDF filename [no default]"
+  echo
+  echo "       -bin [path name] "
+  echo "            Full pathname for NJOY binary [default: none]"
+  echo
+  echo "       -version [NJOY name] "
+  echo "                Name of NJOY binary [default: xnjoy]"
+  echo
+  echo "       -[no]here "
+  echo "                 Run NJOY here or in other (automatically created) directory [default: -here]"
+  echo
+  echo "       -njoydir [path name] "
+  echo "                Full pathname for NJOY results [default: none]"
+  echo
+  echo "       -[no]njoyrun "
+  echo "                   Run NJOY or just produce the input file [default: -njoyrun]"
+  echo
+  echo "       -outname [name] "
+  echo "                Name of output file, 1: nuclide-proj.ace "
+  echo "                                     2: endffile.ace etc. [default: 1]"
+  echo
+  echo "       -[no]diag "
+  echo "                  Diagnosis of output [default: -diag]"
+  echo
+  echo "       -[no]clean "
+  echo "                  Clean up files [default: -clean]"
+  echo
+  echo "   General NJOY parameters"
+  echo
+  echo "       -[no]binary "
+  echo "                  Use binary files [default: -nobinary]"
+  echo
+  echo "        -temp [temperature] "
+  echo "              Temperature [default: 293.6]"
+  echo
+  echo "        -libid [identifier] "
+  echo "               Library indentifier [default: TENDL-2023]"
+  echo
+  echo "        -mcnpext [ext. code ] "
+  echo "                 Extension for ACE file [default: .00]"
+  echo
+  echo "   Specific NJOY modules"
+  echo
+  echo "        -[no]pointwise "
+  echo "                   Do NJOY run for pointwise data only [default: -nopointwise]"
+  echo
+  echo "        -[no]moder "
+  echo "                   Run MODER [default: -moder]"
+  echo
+  echo "        -[no]reconr "
+  echo "                   Run RECONR [default: -reconr]"
+  echo
+  echo "        -[no]broadr "
+  echo "                   Run BROADR [default: -broadr]"
+  echo
+  echo "        -[no]unresr "
+  echo "                   Run UNRESR [default: -unresr]"
+  echo
+  echo "        -[no]heatr "
+  echo "                   Run HEATR [default: -heatr]"
+  echo
+  echo "        -[no]gaspr "
+  echo "                   Run GASPR [default: -gaspr]"
+  echo
+  echo "        -[no]viewr "
+  echo "                   Run VIEWR [default: -viewr]"
+  echo
+  echo "        -[no]purr "
+  echo "                   Run PURR [default: -purr]"
+  echo
+  echo "        -[no]acer "
+  echo "                   Run ACER [default: -acer]"
+  echo
+  echo "        -[no]groupr "
+  echo "                   Run ACER [default: -nogroupr]"
+  echo
+  echo "   NJOY input parameters"
+  echo
+  echo "        -iprint [value] "
+  echo "                Print option (0=min, 1=max) [default: 0]"
+  echo
+  echo "        -tempr [temperature] "
+  echo "             Reconstruction temperature for RECONR [default: 0]"
+  echo
+  echo "        -errr [error] "
+  echo "             Fractional tolerance for RECONR [default: 0.001]"
+  echo
+  echo "        -errmaxr [error] "
+  echo "             Fractional tolerance with RI criterion for RECONR [default: 10*errr]"
+  echo
+  echo "        -errintr [error] "
+  echo "             Maximum RI error for RECONR [default: errr/20000]"
+  echo
+  echo "        -errmult [value] "
+  echo "             Multiplier for NJOY defaults of errmaxr and errintr [default: 1]"
+  echo
+  echo "        -thnmax [value] "
+  echo "                 Maximum energy for broadening and thinning for BROADR [default: 1.]"
+  echo
+  echo "        -errthnb [error] "
+  echo "                 Fractional tolerance for thinning for BROADR [default: 0.001]"
+  echo
+  echo "        -errmaxb [error] "
+  echo "             Fractional tolerance with RI criterion for BROADR [default: 10*errthnb]"
+  echo
+  echo "        -errintb [error] "
+  echo "             Maximum RI error for BROADR [default: errthnb/20000]"
+  echo
+  echo "        -sigz [value] "
+  echo "              sigma0 value for unresolved [default: 1.e10]"
+  echo
+  echo "        -nbin [value] "
+  echo "              Number of probability bins for PURR [default: 20]"
+  echo
+  echo "        -ign [value] "
+  echo "              Number of group structure [default: 20, ECCO 1968]"
+  echo
+  echo "        -nladr [value] "
+  echo "               Number of resonance ladders for PURR [default: 64]"
+  echo
+  echo "        -[no]allkerma "
+  echo "                      partial kermas for all reactions or for 442, 443 and 444 only [default: -noallkerma]"
+  echo
+  echo "        -[no]local "
+  echo "                   gamma rays transported or deposited locally [default: -local]"
+  echo
+  echo "AUTHOR"
+  echo "       autonjoy was written by Arjan Koning."
+  exit
+fi
+#
+################################################################################
+# Initialization (default values) of variables
+################################################################################
+#
+Thome=/Users/koning/
+bin=$Thome'bin/'
+version='xnjoy'
+endffile=xxx
+here=1
+njoyrun=1
+njoydir=xxx
+temp=293.6
+libid=TENDL-2023
+mcnpext=.00
+pointwise=0
+binary=0
+outname=1
+moder=1
+reconr=1
+broadr=1
+unresr=1
+heatr=1
+gaspr=1
+viewr=1
+purr=0
+acer=1
+groupr=0
+clean=1
+iprint=0
+iprintheatr=0
+tempr=0.
+errr=0.001
+errmaxr=0.001
+errintr=1.e-12
+errmult=1
+errthnb=0.001
+thnmax=1.e6
+errmaxb=0.001
+errintb=1.e-12
+sigz=1.e10
+nbin=20
+diag=1
+ign=20
+nladr=64
+allkerma=1
+local=0
+#
+################################################################################
+# Read command line arguments
+################################################################################
+#
+while [ $# -ge 1 ] ; do
+  case $1 in
+    -file)  endffile=$2;shift 2;;
+    -bin)  bin=$2;shift 2;;
+    -version)  version=$2;shift 2;;
+    -here)  here=1;shift;;
+    -nohere)  here=0;shift;;
+    -njoydir)  njoydir=$2;shift 2;;
+    -temp)  temp=$2;shift 2;;
+    -libid)  libid=$2;shift 2;;
+    -mcnpext)  mcnpext=$2;shift 2;;
+    -outname)  outname=$2;shift 2;;
+    -njoyrun)  njoyrun=1;shift;;
+    -nonjoyrun)  njoyrun=0;shift;;
+    -pointwise)  pointwise=1;shift;;
+    -nopointwise)  pointwise=0;shift;;
+    -binary)  binary=1;shift;;
+    -nobinary)  binary=0;shift;;
+    -moder)  moder=1;shift;;
+    -nomoder)  moder=0;shift;;
+    -reconr)  reconr=1;shift;;
+    -noreconr)  reconr=0;shift;;
+    -broadr)  broadr=1;shift;;
+    -nobroadr)  broadr=0;shift;;
+    -unresr)  unresr=1;shift;;
+    -nounresr)  unresr=0;shift;;
+    -heatr)  heatr=1;shift;;
+    -noheatr)  heatr=0;shift;;
+    -gaspr)  gaspr=1;shift;;
+    -nogaspr)  gaspr=0;shift;;
+    -viewr)  viewr=1;shift;;
+    -noviewr)  viewr=0;shift;;
+    -purr)  purr=1;shift;;
+    -nopurr)  purr=0;shift;;
+    -acer)  acer=1;shift;;
+    -noacer)  acer=0;shift;;
+    -groupr)  groupr=1;shift;;
+    -nogroupr)  groupr=0;shift;;
+    -clean)  clean=1;shift;;
+    -noclean)  clean=0;shift;;
+    -iprint)  iprint=$2;shift 2;;
+    -tempr)  tempr=$2;shift 2;;
+    -errr)  errr=$2;shift 2;;
+    -errmaxr)  errmaxr=$2;shift 2;;
+    -errintr)  errintr=$2;shift 2;;
+    -errmult)  errmult=$2;shift 2;;
+    -thnmax)  thnmax=$2;shift 2;;
+    -errthnb)  errthnb=$2;shift 2;;
+    -errmaxb)  errmaxb=$2;shift 2;;
+    -errintb)  errintb=$2;shift 2;;
+    -sigz)  sigz=$2;shift 2;;
+    -nbin)  nbin=$2;shift 2;;
+    -ign)  ign=$2;shift 2;;
+    -nladr)  nladr=$2;shift 2;;
+    -allkerma)  allkerma=1;shift;;
+    -noallkerma)  allkerma=0;shift;;
+    -diag)  diag=1;shift;;
+    -nodiag)  diag=0;shift;;
+    -local)  local=1;shift;;
+    -nolocal)  local=0;shift;;
+    *)  echo "Option [$1] invalid";exit;;
+  esac
+done
+#   
+################################################################################
+# Check for completeness and consistency of input
+################################################################################
+#   
+if [ $endffile == xxx ] ; then
+  echo " -file MUST be specified "
+  exit
+fi
+if [ $njoydir == xxx ] ; then
+  here=1
+fi
+#
+################################################################################
+# Set code version
+################################################################################
+#
+njoy=$bin$version
+#   
+################################################################################
+# Retrieve nuclide, projectile and MAT number from ENDF file
+################################################################################
+#   
+MAT="`head -2 $endffile | tail -1 | colrm 1 66 | colrm 5`"
+matid=`echo ${MAT/ /}`
+AWI="`head -4 $endffile | tail -1 | colrm 1  1 | colrm 11`"
+element="`head -6 $endffile | tail -1 | colrm 1  4 | colrm 3`"
+mass="`head -6 $endffile | tail -1 | colrm 1  7 | colrm 4`"
+iso="`head -6 $endffile | tail -1 | colrm 1  10 | colrm 2`"
+#
+### Remove and add leading zeroes for mass
+#
+mass=`printf "%03d"  $(echo $mass | sed "s/^0*//;s/^$/0/")`
+#
+### Produce correct string for element: only first character uppercase
+#
+element=`echo $element | tr A-Z a-z | awk '{print toupper(substr($0,1,1))substr($0,2)}'`
+iso=`echo $iso | tr A-Z a-z`
+#if [ $iso == m  ] || [ $iso == n  ] || [ $iso == o  ] || [ $iso == p  ] ; then
+if [ -z "$iso" ] ; then
+  ident=$element$mass
+else
+  ident=$element$mass$iso
+fi
+#
+### Identify projectile: neutron, charged particle or photon
+#
+proj=n
+projname=neutron
+if [ ${AWI:0:6} == 9.9862 ] ; then
+  proj=p
+  projname=proton
+fi
+if [ ${AWI:0:6} == 1.9962 ] ; then
+  proj=d
+  projname=deuteron
+fi
+if [ ${AWI:0:6} == 2.9895 ] ; then
+  proj=t
+  projname=triton
+fi
+if [ ${AWI:0:6} == 2.9890 ] ; then
+  proj=h
+  projname=helion
+fi
+if [ ${AWI:0:6} == 3.9671 ] ; then
+  proj=a
+  projname=alpha
+fi
+if [ ${AWI:0:6} == 0.0000 ] ; then
+  proj=g
+  projname=photon
+fi
+echo 'MAT:' $MAT 'AWI:' $AWI 'element:' $element 'mass:' $mass 'iso:' $iso 'projectile:' $projname
+#
+################################################################################
+# Set NJOY input variables
+################################################################################
+#
+# Overwrite input options for pointwise data only
+#
+if [ $pointwise -eq 1 ] ; then
+  heatr=0
+  gaspr=0
+  purr=0
+  acer=0
+  groupr=0
+fi
+# Disable modules that are not allowed for particles other than neutrons
+#
+if [ $proj == n ] ; then
+  Nin=20
+  Nendf=21
+  Npendout=22
+else
+  Nin=20
+  Nendf=$Nin
+  Npendout=21
+  moder=0
+  reconr=0
+  broadr=0
+  unresr=0
+  heatr=0
+  gaspr=0
+  groupr=0
+  purr=0
+  temp=0.
+fi
+if [ $proj == g ] ; then
+  moder=1
+  Nendf=$Npendout
+fi
+Nheat=30
+Nheatp1=31
+Nheatp2=33
+Nplotm1=45
+Nplot=46
+Npendf=47
+Nace=48
+Ndir=49
+if [ $binary -eq 1 ] ; then
+  binchar='-'
+else
+  binchar=
+fi
+#
+################################################################################
+# Write NJOY input file
+################################################################################
+rm -f njoy.inp
+#
+# MODER: Change mode between ASCII and binary
+#
+if [ $moder -eq 1 ] ; then
+  cat > njoy.inp << EOF
+moder
+$Nin $binchar$Nendf/
+EOF
+else
+  Nendf=$Nin
+fi
+#
+# RECONR: Reconstruct cross sections from resonance parameters
+#
+# Explicit tolerances: $errr $tempr $errmaxr $errintr/
+#
+if [ $reconr -eq 1 ] ; then
+  cat >> njoy.inp << EOF
+reconr
+$binchar$Nendf $binchar$Npendout/
+'$projname PENDF for $ident of $libid'
+$matid/
+$errr/
+0/
+EOF
+fi
+#
+# BROADR: Doppler broadening of cross sections
+#
+# Explicit tolerances: $errthnb $thnmax $errmaxb $errintb/
+#
+if [ $broadr -eq 1 ] ; then
+  Npendin=$Npendout
+  Npendout=`expr $Npendout + 1`
+  cat >> njoy.inp << EOF
+broadr
+$binchar$Nendf $binchar$Npendin $binchar$Npendout/
+$matid 1/
+$errthnb/
+$temp/
+0/
+EOF
+fi
+#
+# UNRESR: Compute unresolved resonance cross-sections
+#
+if [ $unresr -eq 1 ] ; then
+  Npendin=$Npendout
+  Npendout=`expr $Npendout + 1`
+  Nunresr=$Npendout
+  cat >> njoy.inp << EOF
+unresr
+$binchar$Nendf $binchar$Npendin $binchar$Npendout/
+$matid 1 1 $iprint/
+$temp/
+$sigz/
+0/
+EOF
+fi
+#
+# HEATR: Compute heating KERMA and radiation damage energy production
+#
+if [ $heatr -eq 1 ] ; then
+  if [ $allkerma -eq 1 ] ; then
+    npk=7
+    kerma='302 303 304 318 402 442 443'
+    npk2=4
+    dpa='444 445 446 447'
+  else
+    npk=3
+    kerma='442 443 444'
+  fi
+  Npendin=$Npendout
+  Npendout=`expr $Npendout + 1`
+#
+# First HEATR run for KERMA
+#
+  cat >> njoy.inp << EOF
+heatr
+$binchar$Nendf $binchar$Npendin $binchar$Npendout $binchar$Nheat/
+$matid $npk 0 0 $local $iprintheatr/
+$kerma/
+EOF
+#
+# Second HEATR run for KERMA
+#
+  Npendout2=`expr $Npendout + 1`
+  cat >> njoy.inp << EOF
+heatr
+$binchar$Nendf $binchar$Npendout $binchar$Npendout2 $binchar$Nheatp2/
+$matid $npk2 0 0 $local $iprintheatr/
+$dpa/
+EOF
+  Npendout=`expr $Npendout + 1`
+fi
+#
+# GASPR: Add gas production reactions (MT203-207) to the pendf tape
+#
+if [ $gaspr -eq 1 ] ; then
+  Npendin=$Npendout2
+  Npendout=`expr $Npendout2 + 1`
+  cat >> njoy.inp << EOF
+gaspr
+$binchar$Nendf $binchar$Npendin $binchar$Npendout/
+EOF
+fi
+#
+# MODER: Change mode between ASCII and binary
+#
+if [ $moder -eq 1 ] && [ $proj != g ] ; then
+  cat >> njoy.inp << EOF
+moder
+$binchar$Npendout $Npendf/
+EOF
+fi
+#
+# GROUPR: Groupwise data
+#
+if [ $groupr -eq 1 ] ; then
+  Npendin=$Npendout
+  Npendout=`expr $Npendout + 1`
+  cat >> njoy.inp << EOF
+groupr
+$binchar$Nendf $binchar$Npendin 0 $binchar$Npendout
+$matid $ign 0 2 1 1 1 /
+'gendf $ident Gprs $ign '/
+$temp
+1.e+10
+3/
+10/
+0/
+0/
+EOF
+fi
+#
+# PURR: Probabilistic unresolved calculation
+#
+if [ $purr -eq 1 ] ; then
+  Npendin=$Npendout
+  Npendout=`expr $Npendout + 1`
+  cat >> njoy.inp << EOF
+purr
+$binchar$Nendf $binchar$Npendin $binchar$Npendout/
+$matid 1 1 $nbin $nladr $iprint/
+$temp/
+$sigz/
+0/
+EOF
+fi
+#
+# VIEWR: Produce plots in postscript format
+#
+if [ $viewr -eq 1 ] && [ $heatr -eq 1 ] && [ $proj == n ] ; then
+  cat >> njoy.inp << EOF
+viewr
+$Nheat $Nheatp1/
+EOF
+fi
+#
+# ACER: Prepare a data library for MCNP
+#
+if [ $acer -eq 1 ] ; then
+  Npendin=$Npendout
+  if [ $proj == g ] ; then
+    iopt=5
+  else
+    iopt=1
+  fi
+  cat >> njoy.inp << EOF
+acer
+$binchar$Nendf $binchar$Npendin 0 $Nace $Ndir/
+$iopt $iprint 1 $mcnpext 0/
+'$ident $projname ACER $libid library; T=${temp}K '
+EOF
+  if [ $iopt -eq 1 ] ; then
+    cat >> njoy.inp << EOF
+$matid $temp/
+1 1/
+/
+EOF
+  else
+    cat >> njoy.inp << EOF
+$matid/
+EOF
+  fi
+fi
+#
+# VIEWR: Produce plots in postscript format
+#
+if [ $viewr -eq 1 ] && [ $acer -eq 1 ] ; then
+  cat >> njoy.inp << EOF
+acer
+0 $Nace $Nplotm1 0 0
+7 1 1/
+'$ident $projname ACER $libid library; T=${temp}K '
+viewr
+$Nplotm1 $Nplot/
+EOF
+fi
+#
+# End of NJOY input file
+#
+cat >> njoy.inp << EOF
+stop
+EOF
+if [ $njoyrun -eq 0 ] ; then
+  exit
+fi
+#
+################################################################################
+# Set directories
+################################################################################
+#
+curdir=`pwd`/
+if [ $here -eq 1 ] ; then
+  njoydir=$curdir
+else
+  if [ $njoydir == xxx ] ; then
+    njoydir=${curdir}/${libid}/${temp}/${matid}/njoy/
+  fi
+  if [ -d $njoydir ]; then
+    rm -rf  $njoydir
+  fi
+  mkdir -p  $njoydir
+fi
+echo " Directory with results: " $njoydir
+#
+################################################################################
+# Run NJOY
+################################################################################
+#
+# - Copy the output to current directory
+# - For pointwise (n,g) and (n,a) data: strip MT section from file
+# - Copy ACE library and xsdir to current directory
+#
+echo " * Start NJOY for " $endffile
+rm -f tape*
+ln -s $endffile ${njoydir}tape$Nin
+if [ $proj != n ] ; then
+  cp $endffile ${njoydir}tape$Npendin
+fi
+cd $njoydir
+$njoy < njoy.inp > njoy.log
+echo " * NJOY done "
+if [ $here -eq 0 ] ; then
+  cp njoy.log ${curdir}
+  cp output ${curdir}/output
+fi
+if [ $outname -eq 2 ] ;then
+  fname=$endffile
+else
+  fname=${proj}'-'${ident}
+fi
+if [ -e tape$Npendf ] ; then
+  cp tape$Npendf ${curdir}/${fname}.pendfN
+fi
+if [ -e tape$Nheatp1 ] ; then
+  cp tape$Nheatp1 ${curdir}/${fname}-njoy-heatr.ps
+fi
+if [ -e tape$Nplot ] ; then
+  cp tape$Nplot ${curdir}/${fname}-njoy-plots.ps
+fi
+if [ $pointwise -eq 1 ] ; then
+  str=${matid}' 3102'
+  grep "${str}" tape$Npendf >  ${endffile}.gpoint
+  str=${matid}' 3 18'
+  grep "${str}" tape$Npendf >  ${endffile}.fpoint
+else
+  if [ $acer -eq 1 ] ;then
+    if [ ! -e  tape$Nace ] ; then
+      echo " NJOY-error: No ace file produced"
+      exit
+    fi
+    cp tape$Nace ${curdir}/${fname}.ace
+    cp tape$Ndir ${curdir}/${fname}.xsdir
+  fi
+fi
+#
+################################################################################
+# Diagnosis of output of NJOY
+################################################################################
+#
+if [ $diag -eq 1 ] ; then
+  echo "Diagnosis of NJOY output in njoy.ers"
+  string[1]='not a gendf'                                       
+  string[2]='not an errorr output'                          
+  string[3]='should have found'                                       
+  string[4]='conversion not coded'                                       
+  string[5]='illegal'                                       
+  string[6]='bad LO'                                       
+  string[7]='not ready'                                       
+  string[8]='unknown isr'                                       
+  string[9]='too many'                                       
+  string[10]='exceeded'                                       
+  string[11]='only works'                                       
+  string[12]='ill-behaved'                                       
+  string[13]='law not installed'                                       
+  string[14]='not coded'                                       
+  string[15]='not provided'                                       
+  string[16]='bad li value'                                       
+  string[17]='nout must be'                                       
+  string[18]='not allowed'                                       
+  string[19]='n2n needed'                                       
+  string[20]='nktot gt nkmax'                                       
+  string[21]='insufficient'                                       
+  string[22]='lf=5 only'                                       
+  string[23]='particles only'                                       
+  string[24]='desired energy'                                       
+  string[25]='limited to 64'                                       
+  string[26]='energy gt'                                       
+  string[27]='out of order'                                       
+  string[28]='must both be'                                       
+  string[29]='should be 15'                                       
+  string[30]='too small'                                       
+  string[31]='desired temperature'                                       
+  string[32]='nxc.gt.nxcmax'
+  string[33]='entire tab1'                                       
+  string[34]='has more than one'                                       
+  string[35]='expected send'                                       
+  string[36]='mat not found'                                       
+  string[37]='no gamma groups'                                       
+  string[38]='wrong type'                                       
+  string[39]='are required'                                       
+  string[40]='cannot handle'                                       
+  string[41]='only lang'                                       
+  string[42]='unit error'                                       
+  string[43]='not complete'                                       
+  string[44]='cannot place'                                       
+  string[45]='unsupported'                                       
+  string[46]='overflow'                                       
+  string[47]='dominant'                                       
+  string[48]='coded for equi'                                       
+  string[49]='out of range'                                       
+  string[50]='desired mat'                                       
+  string[51]='mat not found'                                       
+  string[52]='not supported'                                       
+  string[53]='problem with'                                       
+  string[54]='matrix not installed'                                       
+  string[55]='ion unreasonable'                                       
+  string[56]='redundant mt=10'                                    
+  string[57]='negative probs'                                     
+  string[58]='energy must'                                     
+  string[59]='kalbach a is negative'                           
+  string[60]='unexpected law for recoil'                       
+  string[61]='file 6 law not coded'
+  string[62]='can only do law'
+  string[63]='no delayed'
+  string[64]='matrix not symmetric'
+  string[65]='processing terminated'
+  string[66]='negative URR'
+  string[67]='x so big'
+  string[68]='pendf tapes cannot'
+  string[69]='illegal value of ndigit'
+  string[70]='overlap energies'
+  string[71]='nonpositive elastic'
+  string[72]='error in'
+  string[73]='threshold error'                                       
+  string[74]='may be missing'                                       
+  string[75]='may be incomplete'                                       
+  string[76]='not converged'                                       
+  string[77]='no atomic'                                       
+  string[78]='not processed'                                       
+  string[79]='not on tape'                                       
+  string[80]='failed'                                       
+  string[81]='not included'                                       
+  string[82]='consis:'                                       
+  string[83]='is unreasonable'                                       
+  Nstring=83
+  if [ -e njoy.ers ] ; then
+    rm njoy.ers
+  fi
+  for (( i=1; i<=$Nstring; i++ )) ; do
+    grep -i "${string[i]}" output >> njoy.ers
+  done
+fi
+#
+### CLEAN UP
+#
+if [ $clean -eq 1 ] ; then
+  rm -f tape*  
+fi
+echo "autonjoy is done"
+#Copyright (C)  2023 A.J. Koning
