@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autofudge-1.0 (Version December 29 2023) (C) Copyright 2033 Arjan Koning, All Rights Reserved"
+echo "       autofudge-2.0 (Version February 22 2024) (C) Copyright 2024 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -58,8 +58,9 @@ fi
 ################################################################################
 #
 Thome=/Users/koning/
-fudgepath=$Thome'tools/fudge-4.2.1/'
+fudgepath=$Thome'tools/fudge/'
 bin=$fudgepath'bin/'
+browniesbin=$fudgepath'brownies/bin/'
 endffile=xxx
 diag=1
 clean=0
@@ -90,11 +91,13 @@ if [ $endffile == xxx ] ; then
 fi
 #
 ################################################################################
-# Set executables
+# Set executables and file names
 ################################################################################
 #
-rePrint=$bin'rePrint.py'
-runChecker=$fudgepath'runChecker.py'
+endf2gnds=$browniesbin'endf2gnds.py'
+gnds2endf=$browniesbin'gnds2endf.py'
+runChecker=$bin'checkGNDS.py'
+gndsfile=$endffile'.gnds.xml'
 #   
 ################################################################################
 # Run FUDGE
@@ -102,10 +105,17 @@ runChecker=$fudgepath'runChecker.py'
 #
 echo " * Start FUDGE codes "
 #
-$rePrint --skipBadData $endffile  > fudge.out 2>&1
-colrm < $endffile > file80 81
-diff  test.endf6.noLineNumbers test.endf6.orig.noLineNumbers > fudge.dif
-python $runChecker test.endf6.xml >> fudge.out
+echo " * Translate ENDF file to GNDS file "
+$endf2gnds $endffile
+echo " * Translate GNDS file back to ENDF file "
+$gnds2endf $gndsfile
+endf_outfile=$endffile'.gnds.endf'
+echo " * Write Difference between both ENDF files"
+colrm < $endffile > xx 76
+diff xx $endf_outfile > fudge.dif
+rm xx
+echo " * Check "
+python3 $runChecker $gndsfile > fudge.out
 #
 ################################################################################
 # Diagnosis of output of FUDGE
@@ -128,7 +138,7 @@ if [ $diag -eq 1 ] ; then
     rm fudge.ers
   fi
   for (( i=1; i<=$Nstring; i++ )) ; do
-    grep -i "${string[i]}" output >> fudge.ers
+    grep -i "${string[i]}" fudge.out >> fudge.ers
   done
 fi
 #
@@ -138,4 +148,4 @@ if [ $clean -eq 1 ] ; then
   rm -f test.endf6.* 
 fi
 echo "autofudge is done"
-#Copyright (C)  2023 A.J. Koning
+#Copyright (C)  2024 A.J. Koning
