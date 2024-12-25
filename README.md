@@ -1,10 +1,9 @@
 
 # AUTOENDF
-AUTOENDF is a collection of bash shell scripts for the automatic testing and processing of ENDF-6 formatted 
-nuclear data libraries with the BNL checking codes CHECKR, FIZCON, PSYCHE and INTER, the PREPRO checking 
-and processing codes, and the NJOY processing code. The scripts in AUTOENDF will produce input files, 
-run the codes and automatically analyze the output for errors and warnings. This diagnosis is obtained by searching for 
-the error and warning messages as printed by the various source codes.
+AUTOENDF is a collection of bash shell scripts for the automatic testing and processing of ENDF-6 files 
+with the checking and processing codes CHECKR, FIZCON, PSYCHE and INTER, PREPRO and NJOY. 
+The scripts in AUTOENDF will produce input files, run the codes and automatically analyze the output for errors and warnings. 
+This diagnosis is obtained by grepping the error and warning messages as printed by the various codes.
 
 ## Documentation and reference
 The user manual for AUTOENDF can be found here: [AUTOENDF User Manual (pdf)](https://github.com/arjankoning1/autoendf/blob/main/doc/tools.pdf).
@@ -19,7 +18,7 @@ A.J. Koning, D. Rochman, J.-Ch. Sublet, N. Dzysiuk, M. Fleming, and S. van der M
 The following are the prerequisites for using AUTOENDF:
   - git (if the package is downloaded via Github)
   - bash shell environment
-  - Installed Fortran codes: CHECKR, FIZCON, PSYCHE, INTER (from BNL checking code suite), PREPRO and NJOY. The executables are:
+  - Installed Fortran codes: CHECKR, FIZCON, PSYCHE, INTER (from BNL checking code suite), PREPRO and NJOY. The executables are expected to have the following location and names:
     - \<your bin directory\>/checkr
     - \<your bin directory\>/fizcon
     - \<your bin directory\>/psyche
@@ -38,8 +37,7 @@ To install AUTOENDF:
 ```
   - git clone https://github.com/arjankoning1/autoendf.git
   - cd autoendf/bin
-  - Edit autobnl and change the Thome and bin variables to match with <your bin directory>
-  - Similar for autoprepro and autonjoy
+  - Edit *autobnl*, *autoprepro*, *autonjoy* and change the Thome and bin variables to match with <your bin directory>
 ```
 
 ## Sample case
@@ -47,9 +45,7 @@ To install AUTOENDF:
 A successful installation can be verified by running the sample case. 
 ```
 cd autoendf/sample
-../bin/autobnl -file n-Nb093.tendl.2021
-../bin/autoprepro -file n-Nb093.tendl.2021
-../bin/autonjoy -file n-Nb093.tendl.2021
+./verify
 ```
 
 For simple ENDF-6 format validation, the most important output is probably given in the *checkr.ers*, *njoy.ers* etc. files, 
@@ -63,7 +59,7 @@ The *autoendf/* directory contains the following directories and files:
 
 + `README.md` is this README file.
 + `LICENSE` is the License file.
-+ `bin/` contains the scripts autobnl, autoprepro, autonjoy and, not currently active, autofudge and automcnp.
++ `bin/` contains the scripts *autobnl*, *autoprepro*, *autonjoy* and, not currently active, *autofudge* and *automcnp*.
 + `doc/` contains the tutorial in pdf format (in the appendices).
 + `sample/` contains the ENDF-6 formatted file *n-Nb093.tendl.2021* to be used as test case.
 
