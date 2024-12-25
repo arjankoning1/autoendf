@@ -1,7 +1,7 @@
 
 # AUTOENDF
 AUTOENDF is a collection of bash shell scripts for the automatic testing and processing of ENDF-6 files 
-with the checking and processing codes CHECKR, FIZCON, PSYCHE and INTER, PREPRO and NJOY. 
+with the checking and processing codes CHECKR, FIZCON, PSYCHE, INTER, PREPRO and NJOY. 
 The scripts in AUTOENDF will produce input files, run the codes and automatically analyze the output for errors and warnings. 
 This diagnosis is obtained by grepping the error and warning messages as printed by the various codes.
 
