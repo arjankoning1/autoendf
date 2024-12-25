@@ -37,7 +37,7 @@ To install AUTOENDF:
 ```
   - git clone https://github.com/arjankoning1/autoendf.git
   - cd autoendf/bin
-  - Edit *autobnl*, *autoprepro*, *autonjoy* and change the Thome and bin variables to match with <your bin directory>
+  - Edit autobnl, autoprepro, autonjoy and change the Thome and bin variables to match with <your bin directory>
 ```
 
 ## Sample case
