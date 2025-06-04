@@ -1,7 +1,7 @@
 
 # AUTOENDF
 AUTOENDF is a collection of bash shell scripts for the automatic testing and processing of ENDF-6 files 
-with the checking and processing codes CHECKR, FIZCON, PSYCHE, INTER, PREPRO and NJOY. 
+with the checking and processing codes CHECKR, FIZCON, PSYCHE, INTER, FUDGE, PREPRO and NJOY. 
 The scripts in AUTOENDF will produce input files, run the codes and automatically analyze the output for errors and warnings. 
 This diagnosis is obtained by grepping the error and warning messages as printed by the various codes.
 
@@ -25,11 +25,13 @@ The following are the prerequisites for using AUTOENDF:
     - \<your bin directory\>/inter
     - \<your bin directory\>/recent  (and similar for the other PREPRO codes sigma1, groupie etc.)
     - \<your bin directory\>/xnjoy
+  - Installed FUDGE package
 
 For this you will need to install
   - [PREPRO](https://github.com/IAEA-NDS/PREPRO)
   - [BNL ENDF-utility-codes](https://github.com/IAEA-NDS/ENDF-utility-codes)
   - [NJOY](https://github.com/njoy)
+  - [FUDGE](https://github.com/LLNL/fudge)
 
 ### Instructions:
 
@@ -37,14 +39,14 @@ To install AUTOENDF:
 ```
   - git clone https://github.com/arjankoning1/autoendf.git
   - cd autoendf/bin
-  - Edit autobnl, autoprepro, autonjoy and change the Thome and bin variables to match with <your bin directory>
+  - Edit autobnl, autoprepro, autonjoy, autofudge and change the Thome and bin variables to match with <your bin directory>
 ```
 
 ## Sample case
 
 A successful installation can be verified by running the sample case. 
 ```
-cd autoendf/sample
+cd autoendf/samples
 ./verify
 ```
 
@@ -59,7 +61,7 @@ The *autoendf/* directory contains the following directories and files:
 
 + `README.md` is this README file.
 + `LICENSE` is the License file.
-+ `bin/` contains the scripts *autobnl*, *autoprepro*, *autonjoy* and, not currently active, *autofudge* and *automcnp*.
++ `bin/` contains the scripts *autobnl*, *autoprepro*, *autonjoy*, *autofudge* and, not currently active, *automcnp*.
 + `doc/` contains the tutorial in pdf format (in the appendices).
 + `sample/` contains the ENDF-6 formatted file *n-Nb093.tendl.2021* to be used as test case.
 
