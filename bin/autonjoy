@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autonjoy-1.1 (Version August 8 2024) (C) Copyright 2024 Arjan Koning, All Rights Reserved"
+echo "       autonjoy-1.1 (Version May 20 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -73,7 +73,7 @@ if [ $# -eq 0 ] ; then
   echo "              Temperature [default: 293.6]"
   echo
   echo "        -libid [identifier] "
-  echo "               Library identifier [default: TENDL-2024]"
+  echo "               Library identifier [default: TENDL-2025]"
   echo
   echo "        -mcnpext [ext. code ] "
   echo "                 Extension for ACE file [default: .00]"
@@ -180,7 +180,7 @@ here=1
 njoyrun=1
 njoydir=xxx
 temp=293.6
-libid=TENDL-2024
+libid=TENDL-2025
 mcnpext=.00
 pointwise=0
 binary=0
@@ -794,4 +794,4 @@ if [ $clean -eq 1 ] ; then
   rm -f tape*  
 fi
 echo "autonjoy is done"
-#Copyright (C)  2024 A.J. Koning
+#Copyright (C)  2025 A.J. Koning

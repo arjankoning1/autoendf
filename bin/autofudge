@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autofudge-2.0 (Version February 22 2024) (C) Copyright 2024 Arjan Koning, All Rights Reserved"
+echo "       autofudge-2.0 (Version May 20 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -106,16 +106,16 @@ gndsfile=$endffile'.gnds.xml'
 echo " * Start FUDGE codes "
 #
 echo " * Translate ENDF file to GNDS file "
-$endf2gnds $endffile
+$endf2gnds --skipBadData --skipCovariances --continuumSpectraFix $endffile
 echo " * Translate GNDS file back to ENDF file "
 $gnds2endf $gndsfile
 endf_outfile=$endffile'.gnds.endf'
 echo " * Write Difference between both ENDF files"
 colrm < $endffile > xx 76
 diff xx $endf_outfile > fudge.dif
-rm xx
+rm xx $endf_outfile
 echo " * Check "
-python3 $runChecker $gndsfile > fudge.out
+$runChecker $gndsfile > fudge.out
 #
 ################################################################################
 # Diagnosis of output of FUDGE
@@ -133,7 +133,13 @@ if [ $diag -eq 1 ] ; then
   string[8]='out of order'
   string[9]='unknown'
   string[10]='too low'
-  Nstring=10
+  string[11]='not close'
+  string[12]='Multiplicity > 1'
+  string[13]='does not match'
+  string[14]='statistical weights'
+  string[15]='threshold reaction'
+  string[16]='Discrete level'
+  Nstring=16
   if [ -e fudge.ers ] ; then
     rm fudge.ers
   fi
@@ -148,4 +154,4 @@ if [ $clean -eq 1 ] ; then
   rm -f test.endf6.* 
 fi
 echo "autofudge is done"
-#Copyright (C)  2024 A.J. Koning
+#Copyright (C)  2025 A.J. Koning

@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autobnl-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo "       autobnl-1.0 (Version March 18 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -79,6 +79,9 @@ if [ $# -eq 0 ] ; then
   echo "        -err [error] "
   echo "             Allowable fractional error for FIZCON [default: 0.01]"
   echo
+  echo "        -E [energy] "
+  echo "             Energy in eV for Maxwellian spectrum [default: 2.53e-2]"
+  echo
   echo "AUTHOR"
   echo "       autobnl was written by Arjan Koning."
   exit
@@ -102,6 +105,7 @@ deviant=0
 sumup=0
 ext=
 err=0.01
+E=2.53e-2
 #
 ################################################################################
 # Read command line arguments
@@ -130,6 +134,7 @@ while [ $# -ge 1 ] ; do
     -sumup)  sumup=1;shift;;
     -nosumup)  sumup=0;shift;;
     -err)  err=$2;shift 2;;
+    -E)  E=$2;shift 2;;
     *)  echo "Option [$1] invalid";exit;;
   esac
 done
@@ -264,7 +269,7 @@ N
 1.4e7
 0.0005
 Y
-3.e4
+$E
 1.e-5, 2.e7
 Y
 0.50, 2.e6
