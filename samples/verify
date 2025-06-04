@@ -1,0 +1,6 @@
+#!/bin/bash
+file=n-Nb093.tendl.2021
+../bin/autobnl -file $file
+../bin/autoprepro -file $file
+../bin/autonjoy -file $file
+../bin/autofudge -file $file
