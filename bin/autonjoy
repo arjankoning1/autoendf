@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autonjoy-1.1 (Version May 20 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
+echo "       autonjoy-1.1 (Version July 6 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
