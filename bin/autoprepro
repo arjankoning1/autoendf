@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autoprepro-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo "       autoprepro-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -135,9 +135,10 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome=/Users/koning/
-bin=$Thome'bin/'
-Phome=$Thome'tools/prepro-2021/bin/'
+Thome="${AUTOENDF_HOME:-$HOME}"
+Thome="${Thome%/}"     # remove final slash if present
+bin=$Thome'/bin/'
+Phome=$Thome'/tools/prepro-2021/bin/'
 endffile=xxx
 endffile2=xxx
 name1=xxx
@@ -655,4 +656,4 @@ if [ $clean -eq 1 ] ; then
   rm -f *.IN *.INP *.LST *.OUT MT.DAT PLOT.CHR PLOT.SYM ENDFB.M* prepro.cur PLOTTAB.CUR
 fi
 echo "autoprepro is done"
-#Copyright (C)  2023 A.J. Koning
+#Copyright (C)  2026 A.J. Koning

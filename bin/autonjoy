@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autonjoy-1.1 (Version July 6 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
+echo "       autonjoy-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -73,7 +73,7 @@ if [ $# -eq 0 ] ; then
   echo "              Temperature [default: 293.6]"
   echo
   echo "        -libid [identifier] "
-  echo "               Library identifier [default: TENDL-2025]"
+  echo "               Library identifier [default: TENDL-2026]"
   echo
   echo "        -mcnpext [ext. code ] "
   echo "                 Extension for ACE file [default: .00]"
@@ -172,15 +172,16 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome=/Users/koning/
-bin=$Thome'bin/'
+Thome="${AUTOENDF_HOME:-$HOME}"
+Thome="${Thome%/}"     # remove final slash if present
+bin=$Thome'/bin/'
 version='xnjoy'
 endffile=xxx
 here=1
 njoyrun=1
 njoydir=xxx
 temp=293.6
-libid=TENDL-2025
+libid=TENDL-2026
 mcnpext=.00
 pointwise=0
 binary=0
@@ -794,4 +795,4 @@ if [ $clean -eq 1 ] ; then
   rm -f tape*  
 fi
 echo "autonjoy is done"
-#Copyright (C)  2025 A.J. Koning
+#Copyright (C)  2026 A.J. Koning

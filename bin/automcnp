@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       automcnp-1.0 (Version December 29 2023) (C) Copyright 2023 Arjan Koning, All Rights Reserved"
+echo "       automcnp-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -72,8 +72,9 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome=/Users/koning/
-bin=$Thome'bin/'
+Thome="${AUTOENDF_HOME:-$HOME}"
+Thome="${Thome%/}"     # remove final slash if present
+bin=$Thome'/bin/'
 version='mcnp99.364.jcs'
 mcnp="/home/finux01a/mcnp/bin/mcnp4C3_20070629"
 mcnpx="/home/finux01a/reactor/codes/mpi/mpich1-64/mpich-1.2.7p1/bin/mpirun /home/finux01a/reactor/cbin/q0/mcnpx26F_20100215"
@@ -396,4 +397,4 @@ if [ $clean -eq 1 ] ; then
   rm -f tape* 
 fi
 echo "automcnp is done"
-#Copyright (C)  2023 A.J. Koning
+#Copyright (C)  2026 A.J. Koning

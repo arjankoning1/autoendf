@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autobnl-1.0 (Version March 18 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
+echo "       autobnl-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -91,8 +91,9 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome=/Users/koning/
-bin=$Thome'bin/'
+Thome="${AUTOENDF_HOME:-$HOME}"
+Thome="${Thome%/}"     # remove final slash if present
+bin=$Thome'/bin/'
 endffile=xxx
 outmode=1
 clean=0
@@ -463,4 +464,4 @@ if [ $clean -eq 1 ] ; then
   rm -f checkr.inp fizcon.inp psyche.inp inter.inp
 fi
 echo "autobnl is done"
-#Copyright (C)  2023 A.J. Koning
+#Copyright (C)  2026 A.J. Koning

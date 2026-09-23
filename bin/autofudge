@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autofudge-2.0 (Version May 20 2025) (C) Copyright 2025 Arjan Koning, All Rights Reserved"
+echo "       autofudge-2.1 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -57,10 +57,12 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome=/Users/koning/
-fudgepath=$Thome'tools/fudge/'
+Thome="${AUTOENDF_HOME:-$HOME}"
+Thome="${Thome%/}"     # remove final slash if present
+bin=$Thome'/bin/'
+fudgepath=$Thome'/tools/fudge/.venv/'
 bin=$fudgepath'bin/'
-browniesbin=$fudgepath'brownies/bin/'
+#browniesbin=$fudgepath'brownies/bin/'
 endffile=xxx
 diag=1
 clean=0
@@ -94,8 +96,8 @@ fi
 # Set executables and file names
 ################################################################################
 #
-endf2gnds=$browniesbin'endf2gnds.py'
-gnds2endf=$browniesbin'gnds2endf.py'
+endf2gnds=$bin'endf2gnds.py'
+gnds2endf=$bin'gnds2endf.py'
 runChecker=$bin'checkGNDS.py'
 gndsfile=$endffile'.gnds.xml'
 #   
@@ -154,4 +156,4 @@ if [ $clean -eq 1 ] ; then
   rm -f test.endf6.* 
 fi
 echo "autofudge is done"
-#Copyright (C)  2025 A.J. Koning
+#Copyright (C)  2026 A.J. Koning
