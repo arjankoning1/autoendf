@@ -1,71 +1,208 @@
-
 # AUTOENDF
-AUTOENDF is a collection of bash shell scripts for the automatic testing and processing of ENDF-6 files 
-with the checking and processing codes CHECKR, FIZCON, PSYCHE, INTER, FUDGE, PREPRO and NJOY. 
-The scripts in AUTOENDF will produce input files, run the codes and automatically analyze the output for errors and warnings. 
-This diagnosis is obtained by grepping the error and warning messages as printed by the various codes.
+
+AUTOENDF is a collection of Bash scripts for automatically checking and processing ENDF-6 formatted nuclear data files with several widely used nuclear-data tools. It can run the BNL checking codes, PREPRO, NJOY and FUDGE, generate the required input files, and extract errors and warnings from their output into compact diagnostic files.
+
+The main scripts are:
+
+- `autobnl` for CHECKR, FIZCON, PSYCHE and INTER
+- `autoprepro` for PREPRO
+- `autonjoy` for NJOY
+- `autofudge` for FUDGE
+
+Each script prints its available options when invoked without arguments.
 
 ## Documentation and reference
-The user manual for AUTOENDF can be found here: [AUTOENDF User Manual (pdf)](https://github.com/arjankoning1/autoendf/blob/main/doc/tools.pdf).
-The reference to be used for AUTOENDF is
 
-A.J. Koning, D. Rochman, J.-Ch. Sublet, N. Dzysiuk, M. Fleming, and S. van der Marck, *TENDL: Complete Nuclear Data Library for innovative Nuclear Science and Technology*, Nuclear Data Sheets 155,1 (2019).
+A description of AUTOENDF and its options can be found in the [AUTOENDF tutorial (pdf)](https://github.com/arjankoning1/autoendf/blob/main/doc/tools.pdf).
+
+The reference to be used for AUTOENDF is:
+
+A.J. Koning, D. Rochman, J.-Ch. Sublet, N. Dzysiuk, M. Fleming, and S. van der Marck, *TENDL: Complete Nuclear Data Library for innovative Nuclear Science and Technology*, Nuclear Data Sheets 155, 1 (2019).
 
 ## Installation
 
-### Prerequisites:
+### Prerequisites
 
-The following are the prerequisites for using AUTOENDF:
-  - git (if the package is downloaded via Github)
-  - bash shell environment
-  - Installed Fortran codes: CHECKR, FIZCON, PSYCHE, INTER (from BNL checking code suite), PREPRO and NJOY. The executables are expected to have the following location and names:
-    - \<your bin directory\>/checkr
-    - \<your bin directory\>/fizcon
-    - \<your bin directory\>/psyche
-    - \<your bin directory\>/inter
-    - \<your bin directory\>/recent  (and similar for the other PREPRO codes sigma1, groupie etc.)
-    - \<your bin directory\>/xnjoy
-  - Installed FUDGE package
+AUTOENDF itself consists of Bash scripts and does not require compilation.
 
-For this you will need to install
-  - [PREPRO](https://github.com/IAEA-NDS/PREPRO)
-  - [BNL ENDF-utility-codes](https://github.com/IAEA-NDS/ENDF-utility-codes)
-  - [NJOY](https://github.com/njoy)
-  - [FUDGE](https://github.com/LLNL/fudge)
+The following are required for full use of AUTOENDF:
 
-### Instructions:
+- a Bash shell environment and standard Unix command-line utilities
+- the BNL ENDF checking codes CHECKR, FIZCON, PSYCHE and INTER
+- PREPRO
+- NJOY
+- FUDGE
+- git, only when AUTOENDF is downloaded using `git clone`
 
-To install AUTOENDF:
+The external packages are available from:
+
+- [PREPRO](https://github.com/IAEA-NDS/PREPRO)
+- [BNL ENDF utility codes](https://github.com/IAEA-NDS/ENDF-utility-codes)
+- [NJOY](https://github.com/njoy)
+- [FUDGE](https://github.com/LLNL/fudge)
+
+### Downloads
+
+AUTOENDF can be downloaded in one of the following ways.
+
+#### 1. Latest version without git
+
+Users who do not have git can download a snapshot of the current `main` branch directly from GitHub:
+
+```bash
+curl -L \
+  -o autoendf-main.tar.gz \
+  https://github.com/arjankoning1/autoendf/archive/refs/heads/main.tar.gz
+
+tar zxf autoendf-main.tar.gz
+mv autoendf-main autoendf
 ```
-  - git clone https://github.com/arjankoning1/autoendf.git
-  - cd autoendf/bin
-  - Edit autobnl, autoprepro, autonjoy, autofudge and change the Thome and bin variables to match with <your bin directory>
+
+This produces the same `autoendf/` directory structure as the git version, but without the git history.
+
+The downloaded snapshot contains the latest version of the `main` branch at the time of download. To obtain a newer version later, download the snapshot again.
+
+#### 2. Latest version using git
+
+Users with git can clone the repository with
+
+```bash
+git clone https://github.com/arjankoning1/autoendf.git
 ```
+
+The advantage of this method is that the local AUTOENDF installation can subsequently be updated with
+
+```bash
+cd autoendf
+git pull --ff-only
+```
+
+### Runtime configuration
+
+The AUTOENDF scripts are located in `autoendf/bin/`. To run them from anywhere, add this directory to `PATH`, for example:
+
+```bash
+export PATH="/path/to/autoendf/bin:$PATH"
+```
+
+The external executables can be selected in two ways.
+
+#### 1. Specify the executable directory on the command line
+
+The scripts accept a `-bin` option. For example:
+
+```bash
+autobnl    -file myfile.endf -bin /path/to/bnl/bin/
+autoprepro -file myfile.endf -bin /path/to/prepro/bin/
+autonjoy   -file myfile.endf -bin /path/to/njoy/bin/
+autofudge  -file myfile.endf -bin /path/to/fudge/.venv/bin/
+```
+
+For NJOY, the default executable name is `xnjoy`; another name can be selected with `-version`.
+
+#### 2. Use AUTOENDF_HOME
+
+If `-bin` is not specified, the scripts derive their default external-code locations from `AUTOENDF_HOME`. If `AUTOENDF_HOME` is not defined, `$HOME` is used.
+
+The default layout is:
+
+```text
+$AUTOENDF_HOME/
+├── bin/
+│   ├── checkr
+│   ├── fizcon
+│   ├── psyche
+│   ├── inter
+│   ├── linear
+│   ├── recent
+│   ├── sigma1
+│   ├── ...
+│   └── xnjoy
+└── tools/
+    └── fudge/
+        └── .venv/
+            └── bin/
+                ├── endf2gnds.py
+                ├── gnds2endf.py
+                └── checkGNDS.py
+```
+
+For such an installation, set for example:
+
+```bash
+export AUTOENDF_HOME="/path/to/your/nuclear-data-tools"
+```
+
+This line and the AUTOENDF `PATH` setting can be added to `~/.zshrc` or `~/.profile`.
+
+It is not necessary to edit `Thome` or `bin` inside the AUTOENDF scripts.
+
+## Running AUTOENDF
+
+Each wrapper requires an ENDF-6 file through the `-file` option. Typical examples are:
+
+```bash
+autobnl    -file myfile.endf
+autoprepro -file myfile.endf
+autonjoy   -file myfile.endf
+autofudge  -file myfile.endf
+```
+
+The scripts generate the required input files, run the corresponding external programs and, by default, perform a simple diagnosis of their output.
+
+For ENDF-6 format validation, particularly useful files are the diagnostic `*.ers` files such as:
+
+```text
+checkr.ers
+fizcon.ers
+psyche.ers
+inter.ers
+njoy.ers
+fudge.ers
+```
+
+A non-empty diagnostic file indicates that AUTOENDF found messages matching its error or warning criteria. The corresponding full output file, such as `checkr.out`, `njoy.out` or `fudge.out`, should then be inspected for details.
 
 ## Sample case
 
-A successful installation can be verified by running the sample case. 
-```
+A successful installation can be tested with the supplied Nb-93 TENDL-2025 evaluation:
+
+```bash
 cd autoendf/samples
 ./verify
 ```
 
-For simple ENDF-6 format validation, the most important output is probably given in the *checkr.ers*, *njoy.ers* etc. files, 
-which contain a diagnosis of the (usually long) output files of the various checking and processing codes. 
-When the *.ers* files are not empty, the associated output files *checkr.out*, *njoy.out*, 
-etc. can be consulted for more information on the errors or warnings.
+The verification script runs:
+
+```text
+autobnl
+autoprepro
+autonjoy
+autofudge
+```
+
+on:
+
+```text
+n-Nb093.tendl.2025
+```
+
+The required external codes must be available through the default `AUTOENDF_HOME` layout described above for this unmodified verification script.
 
 ## The AUTOENDF package
 
-The *autoendf/* directory contains the following directories and files:
+The `autoendf/` directory contains:
 
-+ `README.md` is this README file.
-+ `LICENSE` is the License file.
-+ `bin/` contains the scripts *autobnl*, *autoprepro*, *autonjoy*, *autofudge* and, not currently active, *automcnp*.
-+ `doc/` contains the tutorial in pdf format (in the appendices).
-+ `sample/` contains the ENDF-6 formatted file *n-Nb093.tendl.2021* to be used as test case.
+- `README.md` this README file
+- `LICENSE` the license file
+- `bin/` the AUTOENDF scripts `autobnl`, `autoprepro`, `autonjoy`, `autofudge` and `automcnp`
+- `doc/` the AUTOENDF documentation
+- `samples/` the Nb-93 ENDF-6 test file and the `verify` script
 
-In total, you will need about 500 Mb of free disk space to run the sample case of AUTOENDF.
+The `automcnp` script is included in the repository but is not part of the standard `samples/verify` sequence.
+
+Approximately 500 MB of free working space is recommended when running the full sample processing chain.
 
 ## License and Copyright
+
 This software is distributed and copyrighted according to the [LICENSE](LICENSE) file.
