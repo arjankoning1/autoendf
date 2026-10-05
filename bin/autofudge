@@ -60,7 +60,7 @@ fi
 Thome="${AUTOENDF_HOME:-$HOME}"
 Thome="${Thome%/}"     # remove final slash if present
 bin=$Thome'/bin/'
-fudgepath=$Thome'/tools/fudge/.venv/'
+fudgepath=$Thome'/fudge/.venv/'
 bin=$fudgepath'bin/'
 #browniesbin=$fudgepath'brownies/bin/'
 endffile=xxx
