@@ -91,7 +91,7 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-bin=${AUTOBNL_DIR}'/bin/'
+bin=${BNL_DIR}'/bin/'
 endffile=xxx
 outmode=1
 clean=0
