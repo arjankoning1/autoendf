@@ -57,11 +57,8 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome="${AUTOENDF_HOME:-$HOME}"
-Thome="${Thome%/}"     # remove final slash if present
-bin=$Thome'/bin/'
-fudgepath=$Thome'/fudge/.venv/'
-bin=$fudgepath'bin/'
+fudgepath="${FUDGE_DIR:-$HOME/fudge}"
+bin="${fudgepath%/}/.venv/bin/"
 #browniesbin=$fudgepath'brownies/bin/'
 endffile=xxx
 diag=1
