@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autonjoy-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
+echo "       autonjoy-1.2 (Version October 6 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -172,7 +172,11 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-bin=${NJOY_DIR}'/build/'
+if [[ -n "${AUTOTALYS_HOME:-}" ]]; then
+  bin="${AUTOTALYS_HOME%/}/bin/"
+else
+  bin="${NJOY_DIR:-$HOME/NJOY2016}/build/"
+fi
 version='njoy'
 endffile=xxx
 here=1
