@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autoprepro-1.2 (Version September 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
+echo "       autoprepro-1.2 (Version October 6 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -136,7 +136,11 @@ fi
 ################################################################################
 #
 Phome=${PREPRO_DIR}'/test/input/'
-bin=${PREPRO_DIR}'/bin/'
+if [[ -n "${AUTOTALYS_HOME:-}" ]]; then
+  bin="${AUTOTALYS_HOME%/}/bin/"
+else
+  bin="${PREPRO_DIR:-$HOME/PREPRO}/bin/"
+fi
 endffile=xxx
 endffile2=xxx
 name1=xxx
