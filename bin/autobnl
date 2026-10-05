@@ -91,9 +91,7 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome="${AUTOENDF_HOME:-$HOME}"
-Thome="${Thome%/}"     # remove final slash if present
-bin=$Thome'/bin/'
+bin=${AUTOBNL_DIR}'/bin/'
 endffile=xxx
 outmode=1
 clean=0
