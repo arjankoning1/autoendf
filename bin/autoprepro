@@ -135,10 +135,8 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Thome="${AUTOENDF_HOME:-$HOME}"
-Thome="${Thome%/}"     # remove final slash if present
-bin=$Thome'/bin/'
-Phome=$Thome'/tools/prepro-2021/bin/'
+Phome=${PREPRO_DIR}'/test/input/'
+bin=${PREPRO_DIR}'/bin/'
 endffile=xxx
 endffile2=xxx
 name1=xxx
