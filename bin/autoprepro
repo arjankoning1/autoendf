@@ -135,7 +135,8 @@ fi
 # Initialization (default values) of variables
 ################################################################################
 #
-Phome=${PREPRO_DIR}'/test/input/'
+prepro_dir="${PREPRO_DIR:-$HOME/PREPRO}"
+Phome="${prepro_dir%/}/test/input/"
 if [[ -n "${AUTOTALYS_HOME:-}" ]]; then
   bin="${AUTOTALYS_HOME%/}/bin/"
 else
