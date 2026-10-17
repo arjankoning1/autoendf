@@ -76,8 +76,8 @@ Thome="${AUTOENDF_HOME:-$HOME}"
 Thome="${Thome%/}"     # remove final slash if present
 bin=$Thome'/bin/'
 version='mcnp99.364.jcs'
-mcnp="/home/finux01a/mcnp/bin/mcnp4C3_20070629"
-mcnpx="/home/finux01a/reactor/codes/mpi/mpich1-64/mpich-1.2.7p1/bin/mpirun /home/finux01a/reactor/cbin/q0/mcnpx26F_20100215"
+mcnp="{MCNP_DIR}/bin/mcnp"
+mcnpx="{MCNP_DIR}/bin/mcnpx"
 acefile=xxx
 xsdir=xxx
 mcnpdir=xxx
@@ -128,8 +128,8 @@ fi
 # Set codes and paths
 ################################################################################
 #
-mcpost=$Thome'mcnp/bin/mcpost'
-xsdirorg=$Thome'tefal/misc/xsdir'
+mcpost="${MCNP_DIR}/mcnp/bin/mcpost"
+xsdirorg="${TEFAL_DIR}/misc/xsdir"
 #
 ###  Make xsdir-file
 #  
