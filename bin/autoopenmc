@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# AUTOTALYS OpenMC wrapper
+# Executes autoopenmc.py inside a dedicated conda environment without
+# modifying the calling shell, pyenv, or existing virtual environments.
+set -euo pipefail
+
+# Follow symbolic links (e.g. ~/autotalys/bin/autoopenmc ->
+# ~/autotalys/autotalys_tools/bin/autoopenmc).
+source_file="${BASH_SOURCE[0]}"
+while [[ -L "$source_file" ]]; do
+  link_dir="$(cd -P "$(dirname "$source_file")" && pwd)"
+  link_target="$(readlink "$source_file")"
+  if [[ "$link_target" = /* ]]; then
+    source_file="$link_target"
+  else
+    source_file="$link_dir/$link_target"
+  fi
+done
+script_dir="$(cd -P "$(dirname "$source_file")" && pwd)"
+python_script="$script_dir/autoopenmc.py"
+
+if [[ ! -f "$python_script" ]]; then
+  echo "autoopenmc: missing Python script: $python_script" >&2
+  exit 1
+fi
+
+# Standard AUTOTALYS layout: <root>/autotalys_tools/bin/autoopenmc
+# and installer-generated <root>/config/openmc.conf.
+install_root="$(cd "$script_dir/../.." && pwd)"
+config_file="${AUTOOPENMC_CONFIG:-$install_root/config/openmc.conf}"
+
+# Permit settings exported by the caller to override the configuration.
+user_conda="${OPENMC_CONDA:-}"
+user_env="${OPENMC_ENV:-}"
+if [[ -f "$config_file" ]]; then
+  # Trusted local file written by install_autotalys.bash; shell assignments.
+  # shellcheck disable=SC1090
+  source "$config_file"
+fi
+OPENMC_CONDA="${user_conda:-${OPENMC_CONDA:-}}"
+OPENMC_ENV="${user_env:-${OPENMC_ENV:-openmc}}"
+
+if [[ -z "$OPENMC_CONDA" ]]; then
+  for candidate in "$HOME/miniforge3/bin/conda" "$HOME/miniconda3/bin/conda" "$HOME/anaconda3/bin/conda"; do
+    if [[ -x "$candidate" ]]; then
+      OPENMC_CONDA="$candidate"
+      break
+    fi
+  done
+fi
+if [[ -z "$OPENMC_CONDA" ]]; then
+  OPENMC_CONDA="$(command -v conda || true)"
+fi
+if [[ -z "$OPENMC_CONDA" || ! -x "$OPENMC_CONDA" ]]; then
+  echo "autoopenmc: cannot locate conda; set OPENMC_CONDA or install Miniforge." >&2
+  echo "Looked for configuration at: $config_file" >&2
+  exit 1
+fi
+
+exec "$OPENMC_CONDA" run --no-capture-output -n "$OPENMC_ENV" \
+  python "$python_script" "$@"
