@@ -192,7 +192,7 @@ def make_plot(outdir, particle, nuclide, energies, results, new_label):
                               where=(ref > 0) & (values > 0))
             ratio_ax.step(energies, ratio, where='mid', **style)
     ax.set(yscale='log', ylabel='Leakage / source neutron / MeV',
-           title=f'OpenMC {nuclide} {particle} leakage: same geometry and source, different evaluations')
+           title=f'OpenMC {particle} leakage: 14 MeV neutron source in {nuclide} sphere of 10 cm radius')
     ax.legend(fontsize=9)
     ax.grid(alpha=.3)
     ratio_ax.axhline(1., color='black', linestyle='--', linewidth=.8)
