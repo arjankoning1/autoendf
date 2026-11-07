@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare new neutron ENDF evaluation with installed AUTOTALYS world libraries."""
+"""Compare neutron and neutron-induced photon leakage from evaluated ENDF libraries."""
 import argparse
 import csv
 import hashlib
@@ -10,6 +10,7 @@ import re
 import shutil
 import sys
 import traceback
+import xml.etree.ElementTree as ET
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ import numpy as np
 import openmc
 import openmc.data
 
-WORLD_LIBRARIES = ('endfb8.1', 'jeff4.0', 'jendl5.0', 'cendl3.2', 'tendl.2025')
+WORLD_LIBRARIES = ('endfb8.1', 'jeff4.0', 'jendl5.0', 'tendl.2025')
 PLOT_STYLES = {
     'new_tendl': {'label': 'NEW', 'color': 'black'},
     'endfb8.1': {'label': 'ENDF/B-VIII.1', 'color': 'blue'},
@@ -75,14 +76,58 @@ def process_endf(label, src, cache, nuclide, njoy, temperature):
     return xs, digest
 
 
-def run_case(label, xs, output, nuclide, args, edges):
+def find_photon_hdf5(index_path, element):
+    """Return elemental photoatomic HDF5 from an existing OpenMC XML index."""
+    index_path = Path(index_path).expanduser().resolve()
+    if not index_path.is_file():
+        raise FileNotFoundError(f'Photon cross-section index not found: {index_path}')
+    root = ET.parse(index_path).getroot()
+    directory = root.findtext('directory')
+    base = Path(directory).expanduser() if directory else index_path.parent
+    if not base.is_absolute():
+        base = (index_path.parent / base).resolve()
+    for entry in root.findall('library'):
+        if entry.get('type') != 'photon':
+            continue
+        if element not in entry.get('materials', '').split():
+            continue
+        path = Path(entry.attrib['path'])
+        path = path if path.is_absolute() else base / path
+        path = path.resolve()
+        if not path.is_file():
+            raise FileNotFoundError(f'Photon HDF5 file referenced by {index_path} is missing: {path}')
+        return path
+    raise ValueError(f'No photon HDF5 entry for element {element} in {index_path}')
+
+
+def transport_index(xs, photon_hdf5, output):
+    """Keep each evaluation's own neutron data, with common photoatomic data."""
+    if photon_hdf5 is None:
+        return xs
+    target = output / 'cross_sections_transport.xml'
+    # Generate index using HDF5 metadata rather than editing paths by hand.
+    neutron_lib = openmc.data.DataLibrary.from_xml(str(xs))
+    neutron_files = [Path(item['path']) for item in neutron_lib if item['type'] == 'neutron']
+    if len(neutron_files) != 1:
+        raise ValueError(f'Expected one neutron entry in {xs}, found {len(neutron_files)}')
+    neutron_h5 = neutron_files[0]
+    if not neutron_h5.is_absolute():
+        neutron_h5 = (xs.parent / neutron_h5).resolve()
+    library = openmc.data.DataLibrary()
+    library.register_file(str(neutron_h5))
+    library.register_file(str(photon_hdf5))
+    library.export_to_xml(str(target))
+    return target
+
+
+def run_case(label, xs, output, nuclide, args, neutron_edges, photon_edges, photon_hdf5):
     output.mkdir(parents=True, exist_ok=True)
     material = openmc.Material(name=nuclide)
     material.add_nuclide(nuclide, 1.)
     material.set_density('g/cm3', args.density)
     material.temperature = args.temperature
     materials = openmc.Materials([material])
-    materials.cross_sections = str(xs)
+    materials.cross_sections = str(transport_index(xs, photon_hdf5, output))
     surface = openmc.Sphere(r=args.radius, boundary_type='vacuum')
     cell = openmc.Cell(fill=material, region=-surface)
     geometry = openmc.Geometry([cell])
@@ -97,55 +142,75 @@ def run_case(label, xs, output, nuclide, args, edges):
     settings.batches = args.batches
     settings.particles = args.particles
     settings.seed = args.seed
-    tally = openmc.Tally(name='neutron_flux')
-    tally.filters = [openmc.CellFilter(cell), openmc.ParticleFilter(['neutron']), openmc.EnergyFilter(edges)]
-    tally.scores = ['flux']
+    settings.photon_transport = photon_hdf5 is not None
+
+    tallies = openmc.Tallies()
+    for particle, edges in [('neutron', neutron_edges), ('photon', photon_edges)]:
+        if particle == 'photon' and photon_hdf5 is None:
+            continue
+        tally = openmc.Tally(name=f'{particle}_leakage')
+        tally.filters = [openmc.SurfaceFilter(surface),
+                         openmc.ParticleFilter([particle]),
+                         openmc.EnergyFilter(edges)]
+        tally.scores = ['current']
+        tallies.append(tally)
     model = openmc.Model(geometry=geometry, materials=materials,
-                         settings=settings, tallies=openmc.Tallies([tally]))
-    print(f'[{label}] OpenMC transport ({args.particles * args.batches} histories)', flush=True)
+                         settings=settings, tallies=tallies)
+    print(f'[{label}] OpenMC transport ({args.particles * args.batches} histories, '
+          f'photons={settings.photon_transport})', flush=True)
     statepoint = model.run(cwd=str(output), threads=args.threads)
+    spectra = {}
     with openmc.StatePoint(statepoint) as sp:
-        result = sp.get_tally(name='neutron_flux')
-        v = result.mean.ravel().copy()
-        e = result.std_dev.ravel().copy()
-    volume = 4 * np.pi * args.radius ** 3 / 3
-    widths = np.diff(edges) / 1e6
-    energies = (edges[:-1] + edges[1:]) / 2e6
-    spectrum = v / volume / widths
-    error = e / volume / widths
-    np.savetxt(output / 'spectrum.dat', np.column_stack([energies, spectrum, error]),
-               header='Energy_MeV Flux_cm-2_MeV-1_per_source Std_dev')
-    return spectrum, error
+        for particle, edges in [('neutron', neutron_edges), ('photon', photon_edges)]:
+            if particle == 'photon' and photon_hdf5 is None:
+                continue
+            result = sp.get_tally(name=f'{particle}_leakage')
+            values = result.mean.ravel().copy()
+            errors = result.std_dev.ravel().copy()
+            widths = np.diff(edges) / 1e6
+            energies = (edges[:-1] + edges[1:]) / 2e6
+            # Vacuum outer surface: net outward current = escaping particles.
+            spectrum = values / widths
+            error = errors / widths
+            np.savetxt(output / f'{particle}_spectrum.dat',
+                       np.column_stack([energies, spectrum, error]),
+                       header='Energy_MeV Leakage_MeV-1_per_source Std_dev')
+            spectra[particle] = (spectrum, error)
+    return spectra
 
 
-def make_plots(outdir, energies, results, new_label):
+def make_plot(outdir, particle, nuclide, energies, results, new_label):
     fig, (ax, ratio_ax) = plt.subplots(2, 1, figsize=(10, 8), sharex=True,
                                        gridspec_kw={'height_ratios': [3, 1]})
     ref, _ = results[new_label]
     for label, (values, errs) in results.items():
-        style = PLOT_STYLES.get(label)
-        if style is None:
-            continue
+        style = PLOT_STYLES.get(label, {'label': label})
         ax.step(energies, np.where(values > 0, values, np.nan), where='mid',
                 linewidth=2 if label == new_label else 1.1, **style)
         if label != new_label:
-            ratio = np.divide(values, ref, out=np.full_like(values, np.nan), where=ref > 0)
+            ratio = np.divide(values, ref, out=np.full_like(values, np.nan),
+                              where=(ref > 0) & (values > 0))
             ratio_ax.step(energies, ratio, where='mid', **style)
-    ax.set(yscale='log', ylabel='Volume-averaged flux / source\n(cm$^{-2}$ MeV$^{-1}$)',
-           title='OpenMC neutron spectra: same geometry and source, different evaluations')
+    ax.set(yscale='log', ylabel='Leakage / source neutron / MeV',
+           title=f'OpenMC {nuclide} {particle} leakage: same geometry and source, different evaluations')
     ax.legend(fontsize=9)
     ax.grid(alpha=.3)
     ratio_ax.axhline(1., color='black', linestyle='--', linewidth=.8)
-    ratio_ax.set(xlabel='Neutron energy (MeV)', ylabel='Library / NEW')
+    ratio_ax.set(xlabel=f'{particle.capitalize()} energy (MeV)', ylabel='Library / NEW')
     ratio_ax.grid(alpha=.3)
     fig.tight_layout()
-    fig.savefig(outdir / 'comparison.png', dpi=180)
+    stem = f'{particle[0]}-{nuclide}_comparison'
+    plot_path = outdir / f'{stem}.png'
+    fig.savefig(plot_path, dpi=180)
     plt.close(fig)
-    with (outdir / 'comparison.csv').open('w', newline='') as f:
+    with (outdir / f'{stem}.csv').open('w', newline='') as f:
         writer = csv.writer(f)
-        writer.writerow(['Energy_MeV'] + [part for label in results for part in (f'{label}_flux', f'{label}_stderr')])
-        for i, e in enumerate(energies):
-            writer.writerow([e] + [part for spec, err in results.values() for part in (spec[i], err[i])])
+        writer.writerow(['Energy_MeV'] + [part for label in results
+                         for part in (f'{label}_leakage', f'{label}_stderr')])
+        for i, energy in enumerate(energies):
+            writer.writerow([energy] + [part for spec, err in results.values()
+                           for part in (spec[i], err[i])])
+    return plot_path
 
 
 def main():
@@ -158,11 +223,15 @@ def main():
                         help='LIBRARIES_DIR root; defaults to environment or ~/libraries')
     parser.add_argument('-worldlibs', default='all', help='all, none, or comma-separated names')
     parser.add_argument('-njoybin', default='njoy')
+    parser.add_argument('-photon-xs', default=os.environ.get('OPENMC_CROSS_SECTIONS'),
+                        help='Cross sections XML with photoatomic HDF5 for element (required unless -no-photons)')
+    parser.add_argument('-no-photons', action='store_true',
+                        help='Run neutron leakage only, without coupled neutron-photon transport')
     parser.add_argument('-energy', type=float, default=14.)
     parser.add_argument('-radius', type=float, default=10.)
     parser.add_argument('-density', type=float, default=7.874)
     parser.add_argument('-temperature', type=float, default=293.6)
-    parser.add_argument('-particles', type=int, default=5000)
+    parser.add_argument('-particles', type=int, default=50000)
     parser.add_argument('-batches', type=int, default=20)
     parser.add_argument('-threads', type=int, default=4)
     parser.add_argument('-seed', type=int, default=12345)
@@ -188,31 +257,55 @@ def main():
                 missing.append(f'{label}: {path}')
     for x in missing:
         print(f'[SKIP] Missing {x}', flush=True)
-    edges = np.linspace(0, max(15., args.energy + 1.) * 1e6, 151)
-    centers = (edges[:-1] + edges[1:]) / 2e6
-    results = {}
+    photon_hdf5 = None
+    if not args.no_photons:
+        if not args.photon_xs:
+            parser.error('Photon transport requires -photon-xs /path/to/cross_sections.xml '
+                         '(or OPENMC_CROSS_SECTIONS). Alternatively use -no-photons.')
+        photon_hdf5 = find_photon_hdf5(args.photon_xs, element)
+        print(f'Using common {element} photoatomic data: {photon_hdf5}', flush=True)
+
+    neutron_edges = np.linspace(0, max(15., args.energy + 1.) * 1e6, 151)
+    photon_edges = np.linspace(0, max(15., args.energy + 1.) * 1e6, 151)
+    centers = {
+        'neutron': (neutron_edges[:-1] + neutron_edges[1:]) / 2e6,
+        'photon': (photon_edges[:-1] + photon_edges[1:]) / 2e6,
+    }
+    results = {'neutron': {}, 'photon': {}}
     manifest = {'nuclide': nuclide, 'source_energy_MeV': args.energy,
                 'density_g_cm3': args.density, 'radius_cm': args.radius,
                 'temperature_K': args.temperature, 'libraries_dir': str(root),
+                'photoatomic_hdf5': str(photon_hdf5) if photon_hdf5 else None,
+                'observable': 'outward surface current per source neutron per MeV',
                 'runs': {}, 'skipped_missing': missing, 'failed': {}}
     for label, path in paths:
         try:
-            xs, digest = process_endf(label, path, outdir / 'cache', nuclide, njoy, args.temperature)
+            xs, digest = process_endf(label, path, outdir / 'cache', nuclide,
+                                      njoy, args.temperature)
             run_dir = outdir / 'runs' / label
-            values, errors = run_case(label, xs, run_dir, nuclide, args, edges)
-            results[label] = (values, errors)
-            manifest['runs'][label] = {'source_endf': str(path), 'sha256': digest,
-                                      'cross_sections_xml': str(xs), 'spectrum': str(run_dir / 'spectrum.dat')}
+            spectra = run_case(label, xs, run_dir, nuclide, args,
+                               neutron_edges, photon_edges, photon_hdf5)
+            for particle, (values, errors) in spectra.items():
+                results[particle][label] = (values, errors)
+            manifest['runs'][label] = {
+                'source_endf': str(path), 'sha256': digest,
+                'cross_sections_xml': str(xs),
+                'spectra': {particle: str(run_dir / f'{particle}_spectrum.dat')
+                            for particle in spectra}}
         except Exception as exc:
             manifest['failed'][label] = str(exc)
             print(f'[ERROR] {label}: {exc}', file=sys.stderr, flush=True)
             if label == 'new_tendl':
                 (outdir / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
                 raise
-    make_plots(outdir, centers, results, 'new_tendl')
+    for particle in ('neutron', 'photon'):
+        if results[particle]:
+            plot_path = make_plot(outdir, particle, nuclide, centers[particle],
+                                  results[particle], 'new_tendl')
+            print(f'Plot: {plot_path}', flush=True)
     (outdir / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-    print(f'Finished: {len(results)} successful evaluations, {len(missing)} missing, '
-          f'{len(manifest["failed"])} failed. Plot: {outdir / "comparison.png"}', flush=True)
+    print(f'Finished: {len(results["neutron"])} successful evaluations, '
+          f'{len(missing)} missing, {len(manifest["failed"])} failed.', flush=True)
     return 0 if not manifest['failed'] else 2
 
 
