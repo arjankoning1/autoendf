@@ -2,7 +2,7 @@
 #
 #
 echo
-echo "       autonjoy-1.2 (Version October 6 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
+echo "       autonjoy-1.2 (Version November 7 2026) (C) Copyright 2026 Arjan Koning, All Rights Reserved"
 echo
 echo $0 $@
 echo
@@ -782,7 +782,8 @@ if [ $diag -eq 1 ] ; then
   string[81]='not included'                                       
   string[82]='consis:'                                       
   string[83]='is unreasonable'                                       
-  Nstring=83
+  string[84]='error in sixbar'                                       
+  Nstring=84
   if [ -e njoy.ers ] ; then
     rm njoy.ers
   fi
