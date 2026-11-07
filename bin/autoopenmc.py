@@ -18,6 +18,13 @@ import openmc
 import openmc.data
 
 WORLD_LIBRARIES = ('endfb8.1', 'jeff4.0', 'jendl5.0', 'cendl3.2', 'tendl.2025')
+PLOT_STYLES = {
+    'new_tendl': {'label': 'NEW', 'color': 'black'},
+    'endfb8.1': {'label': 'ENDF/B-VIII.1', 'color': 'blue'},
+    'jeff4.0': {'label': 'JEFF-4.0', 'color': 'red'},
+    'jendl5.0': {'label': 'JENDL-5.0', 'color': 'green'},
+    'tendl.2025': {'label': 'TENDL-2025', 'color': 'orange', 'linestyle': '--'},
+}
 
 
 def checksum(path):
@@ -116,17 +123,20 @@ def make_plots(outdir, energies, results, new_label):
                                        gridspec_kw={'height_ratios': [3, 1]})
     ref, _ = results[new_label]
     for label, (values, errs) in results.items():
-        ax.step(energies, np.where(values > 0, values, np.nan), where='mid', label=label,
-                linewidth=2 if label == new_label else 1.1)
+        style = PLOT_STYLES.get(label)
+        if style is None:
+            continue
+        ax.step(energies, np.where(values > 0, values, np.nan), where='mid',
+                linewidth=2 if label == new_label else 1.1, **style)
         if label != new_label:
             ratio = np.divide(values, ref, out=np.full_like(values, np.nan), where=ref > 0)
-            ratio_ax.step(energies, ratio, where='mid', label=label)
+            ratio_ax.step(energies, ratio, where='mid', **style)
     ax.set(yscale='log', ylabel='Volume-averaged flux / source\n(cm$^{-2}$ MeV$^{-1}$)',
            title='OpenMC neutron spectra: same geometry and source, different evaluations')
     ax.legend(fontsize=9)
     ax.grid(alpha=.3)
     ratio_ax.axhline(1., color='black', linestyle='--', linewidth=.8)
-    ratio_ax.set(xlabel='Neutron energy (MeV)', ylabel='Library / new TENDL')
+    ratio_ax.set(xlabel='Neutron energy (MeV)', ylabel='Library / NEW')
     ratio_ax.grid(alpha=.3)
     fig.tight_layout()
     fig.savefig(outdir / 'comparison.png', dpi=180)
